@@ -3,22 +3,17 @@ local api = vim.api;
 local default_config = require('abbreinder.config')
 
 local abbreinder = {
-  abbrev_cache = '',
-  abbrev_map_cache = '',
   floating_win = -1,
+  cache = {
+    abbrevs = '',
+    abbrev_map = '',
+  },
   last_reminder = {
     index = '',
     key = ''
   }
 }
 
-
-function abbreinder.close_floating_win()
-
-  if api.nvim_win_is_valid(abbreinder.floating_win) then
-    api.nvim_win_close(abbreinder.floating_win, true)
-  end
-end
 
 local function open_window(text)
 
@@ -49,13 +44,21 @@ local function open_window(text)
     col = col,
   }
 
+  opts = vim.tbl_extend('force', opts, abbreinder.config.float.opts)
+
   -- and finally create it with buffer attached
-  abbreinder.floating_win = api.nvim_open_win(buf, true, opts)
+  abbreinder.floating_win = api.nvim_open_win(buf, false, opts)
   api.nvim_buf_add_highlight(buf, -1, abbreinder.config.msg.highlight, 0, 0, -1)
 
-  vim.api.nvim_command('wincmd w')
-
   vim.defer_fn(abbreinder.close_floating_win, abbreinder.config.float.time_open)
+end
+
+
+function abbreinder.close_floating_win()
+
+  if api.nvim_win_is_valid(abbreinder.floating_win) then
+    api.nvim_win_close(abbreinder.floating_win, true)
+  end
 end
 
 
@@ -71,15 +74,16 @@ local function output_reminder(key, val)
 
 end
 
+
 -- @Summary Parses neovim's list of abbrevations into a map
 local function get_abbrevs()
 
   local abbrevs = api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
 
-  if (abbreinder.abbrev_cache == abbrevs) then
+  if (abbreinder.cache.abbrevs == abbrevs) then
     return abbreinder.abbrev_map_cache
   end
-  abbreinder.abbrev_cache = abbrevs
+  abbreinder.cache.abbrevs = abbrevs
 
 
   local abbrev_map = {}
@@ -94,7 +98,10 @@ local function get_abbrevs()
   return abbrev_map
 end
 
-function Check_for_abbrev(duplicate_echos)
+
+function abbreinder.check(duplicate_echos)
+
+  abbreinder.close_floating_win()
 
   duplicate_echos = duplicate_echos or true
 
@@ -127,12 +134,13 @@ function Check_for_abbrev(duplicate_echos)
 
   end
 
-  -- don't give the same correction twice in a row. annoying
-  if (most_recent_abbr.key == abbreinder.last_reminder.key) then return end
+  if api.nvim_win_is_valid(abbreinder.floating_win) and
+    most_recent_abbr.index == abbreinder.last_reminder.index
+  then return end
 
-  if most_recent_abbr.index ~= -1 and
-    (duplicate_echos or abbreinder.last_reminder.index ~= most_recent_abbr.index)
-  then
+  if (not duplicate_echos and most_recent_abbr.key == abbreinder.last_reminder.key) then return end
+
+  if most_recent_abbr.index ~= -1 then
 
     abbreinder.last_reminder.index = most_recent_abbr.index
 
@@ -142,8 +150,6 @@ function Check_for_abbrev(duplicate_echos)
   end
 end
 
-
-abbreinder.check = Check_for_abbrev;
 
 abbreinder.create_commands = function()
 
@@ -162,7 +168,6 @@ abbreinder.create_commands = function()
 
 end
 
--- autocmd ]]..abbreinder.config.run_on..[[ * :lua vim.api.nvim_buf_call(0, Check_for_abbrev)
 
 -- @Summary Sets up abbreinder
 -- @Description launch abbreinder with specified config (falling back to defaults from ./abbreinder/config.lua)
@@ -177,3 +182,4 @@ function abbreinder.setup(user_config)
 end
 
 return abbreinder
+
