@@ -117,7 +117,7 @@ function abbreinder.check(duplicate_echos)
 
     repeat
 
-      local abbrev_index = text_to_search:find(val, last_match_idx)
+      local abbrev_index = text_to_search:find(val .. ' ', last_match_idx)
 
       if abbrev_index ~= nil then
 
