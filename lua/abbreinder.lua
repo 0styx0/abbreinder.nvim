@@ -7,10 +7,16 @@ local abbreinder = {
   cache = {
     abbrevs = '',
     abbrev_map = '',
+    source = '',
   },
   last_reminder = {
     index = '',
     key = ''
+  },
+  abbr = {
+    triggered = false,
+    key = '',
+    val = ''
   }
 }
 
@@ -44,13 +50,13 @@ local function open_window(text)
     col = col,
   }
 
-  opts = vim.tbl_extend('force', opts, abbreinder.config.float.opts)
+  opts = vim.tbl_extend('force', opts, abbreinder.config.output.floating_win.opts)
 
   -- and finally create it with buffer attached
   abbreinder.floating_win = api.nvim_open_win(buf, false, opts)
-  api.nvim_buf_add_highlight(buf, -1, abbreinder.config.msg.highlight, 0, 0, -1)
+  api.nvim_buf_add_highlight(buf, -1, abbreinder.config.output.msg.highlight, 0, 0, -1)
 
-  vim.defer_fn(abbreinder.close_floating_win, abbreinder.config.float.time_open)
+  vim.defer_fn(abbreinder.close_floating_win, abbreinder.config.output.floating_win.time_open)
 end
 
 
@@ -64,11 +70,13 @@ end
 
 local function output_reminder(key, val)
 
-    local msg = abbreinder.config.msg.format(key, val)
+    local msg = abbreinder.config.output.msg.format(key, val)
 
-    if abbreinder.config.float.enabled then
+    if abbreinder.config.output.as.floating_win then
       open_window(msg)
-    else
+    end
+
+    if (abbreinder.config.output.as.echo) then
       api.nvim_echo({{msg}}, {false}, {})
     end
 
@@ -99,54 +107,34 @@ local function get_abbrevs()
 end
 
 
-function abbreinder.check(duplicate_echos)
+function abbreinder.check()
 
-  abbreinder.close_floating_win()
-
-  duplicate_echos = duplicate_echos or true
-
-  local text_to_search = abbreinder.config.source()
-  local most_recent_abbr = { key = '', val = '', index = -1 }
-  local abbrev_map = get_abbrevs()
-
-  -- loop through each abbr, check if it's in `text_to_search`
-  -- if there's multiple appearances of the same abbr, use the most recent one
-  for key,val in pairs(abbrev_map) do
-
-    local last_match_idx = 0
-
-    repeat
-
-      local abbrev_index = text_to_search:find(val .. ' ', last_match_idx)
-
-      if abbrev_index ~= nil then
-
-	if (abbrev_index > most_recent_abbr.index) then
-	  most_recent_abbr.index = abbrev_index
-	  most_recent_abbr.key = key
-	  most_recent_abbr.val = val
-	end
-
-	last_match_idx = abbrev_index + 1
-      end
-
-    until abbrev_index == nil
-
+  if abbreinder.abbr.triggered then
+    output_reminder(abbreinder.abbr.key, abbreinder.abbr.val)
   end
 
-  if api.nvim_win_is_valid(abbreinder.floating_win) and
-    most_recent_abbr.index == abbreinder.last_reminder.index
-  then return end
+  abbreinder.abbr.triggered = false
+end
 
-  if (not duplicate_echos and most_recent_abbr.key == abbreinder.last_reminder.key) then return end
+function abbreinder.did_abbrev_trigger()
 
-  if most_recent_abbr.index ~= -1 then
+  local text_to_search = abbreinder.config.source()
+  local abbrev_map = get_abbrevs()
 
-    abbreinder.last_reminder.index = most_recent_abbr.index
+  -- fname = characters that expand abbreviations. see help abbreviations
+  local cur_char_is_abbr_expanding = vim.fn.fnameescape(vim.v.char) ~= vim.v.char
 
-    output_reminder(most_recent_abbr.key, most_recent_abbr.val)
+  for potential_key in text_to_search:gmatch('%S+') do
 
-    abbreinder.last_reminder.key = most_recent_abbr.key
+    local abbr_key_typed = abbrev_map[potential_key] ~= nil
+    if (abbr_key_typed and cur_char_is_abbr_expanding) then
+
+      abbreinder.abbr.triggered = true
+      abbreinder.abbr.key = potential_key
+      abbreinder.abbr.val = abbrev_map[potential_key]
+      -- print(potential_key..' triggered ')
+      return
+    end
   end
 end
 
@@ -160,9 +148,11 @@ abbreinder.create_commands = function()
   vim.cmd([[
   augroup Abbreinder
   autocmd!
+  " autocmd TextChanged * :echom 'TextChanged' getline('.')
+  autocmd InsertCharPre * :lua require('abbreinder').did_abbrev_trigger()
+  " autocmd CursorMovedI * :echom 'CursorMovedI' getline('.')
   autocmd ]]..abbreinder.config.run_on..[[ * :lua require('abbreinder').check(false)
-  autocmd ]]..abbreinder.config.run_on..[[ * :lua require('abbreinder').check(false)
-  autocmd     BufEnter                     * :lua require('abbreinder').close_floating_win()
+  " autocmd     BufEnter                     * :lua require('abbreinder').close_floating_win()
   augroup END
   ]])
 
