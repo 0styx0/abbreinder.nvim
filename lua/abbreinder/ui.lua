@@ -1,11 +1,9 @@
 local api = vim.api;
 local ui = {
-  floating_win = -1,
+  floating_win = {},
 }
 
 local function open_window(abbreinder, text)
-
-  ui.close_floating_win()
 
   local buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
 
@@ -23,30 +21,32 @@ local function open_window(abbreinder, text)
   -- set some options
   local opts = {
     style = 'minimal',
-    relative = 'editor',
+    relative = 'win',
     anchor = 'SE',
     width = #text,
     height = 1,
     focusable = false,
     noautocmd = true,
-    row = line,
+    --bufpos = {line, col},
+    row = line - 1,
     col = col,
+    -- border = 'solid',
   }
 
   opts = vim.tbl_extend('force', opts, abbreinder.config.output.floating_win.opts)
 
   -- and finally create it with buffer attached
-  ui.floating_win = api.nvim_open_win(buf, false, opts)
+  local id = api.nvim_open_win(buf, false, opts)
   api.nvim_buf_add_highlight(buf, -1, abbreinder.config.output.floating_win.highlight, 0, 0, -1)
 
-  vim.defer_fn(ui.close_floating_win, abbreinder.config.output.floating_win.time_open)
+  vim.defer_fn(function() ui.close_floating_win(id) end, abbreinder.config.output.floating_win.time_open)
 end
 
 
-function ui.close_floating_win()
+function ui.close_floating_win(win_id)
 
-  if api.nvim_win_is_valid(ui.floating_win) then
-    api.nvim_win_close(ui.floating_win, true)
+  if api.nvim_win_is_valid(win_id) then
+    api.nvim_win_close(win_id, true)
   end
 end
 

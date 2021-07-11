@@ -36,6 +36,7 @@ local function get_abbrevs()
     local vim_abolish_delim = '*@'
     local vim_abolish_escaped_val = val:gsub('^'..vim_abolish_delim, '')
     abbrev_map[key] = vim_abolish_escaped_val
+    -- if key == 'abbr' then print ('abbr find') end
   end
   abbreinder.cache.abbrev_map = abbrev_map
 
@@ -72,6 +73,7 @@ function abbreinder.did_abbrev_trigger()
 
   local text_to_search = abbreinder.config.source()
   local abbrev_map = get_abbrevs()
+  -- print(abbrev_map['abbr'])
 
   -- print('did_trg: '..abbreinder.abbr.key)
   -- fname = characters that expand abbreviations. see :help abbreviations
