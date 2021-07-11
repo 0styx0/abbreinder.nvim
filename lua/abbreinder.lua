@@ -56,6 +56,7 @@ function abbreinder.check()
     -- print('unexpanded: '..abbreinder.abbr.key..' val: '..abbreinder.abbr.val)
 
     if text_to_search:find(abbreinder.abbr.val..' ', abbreinder.abbr.start_idx) ~= nil then
+
       ui.output_reminder(abbreinder, abbreinder.abbr.key, abbreinder.abbr.val)
       vim.cmd [[doautocmd User AbbreinderAbbrNotExpanded]]
     end
@@ -67,12 +68,12 @@ function abbreinder.check()
   abbreinder.abbr.start_idx = -1
 end
 
-
 function abbreinder.did_abbrev_trigger()
 
   local text_to_search = abbreinder.config.source()
   local abbrev_map = get_abbrevs()
 
+  -- print('did_trg: '..abbreinder.abbr.key)
   -- fname = characters that expand abbreviations. see :help abbreviations
   local cur_char_is_abbr_expanding = vim.fn.fnameescape(vim.v.char) ~= vim.v.char
 
@@ -82,6 +83,7 @@ function abbreinder.did_abbrev_trigger()
   while start_idx ~= nil do
 
     local potential_key = text_to_search:sub(start_idx, end_idx)
+  --for potential_key in text_to_search:gmatch('%S+') do
 
     -- if key typed previously, but now not expanding character
     local abbr_key_typed = abbrev_map[potential_key] ~= nil

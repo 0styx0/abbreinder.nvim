@@ -36,7 +36,7 @@ local function open_window(abbreinder, text)
 
   -- and finally create it with buffer attached
   ui.floating_win = api.nvim_open_win(buf, false, opts)
-  api.nvim_buf_add_highlight(buf, -1, abbreinder.config.output.msg.highlight, 0, 0, -1)
+  api.nvim_buf_add_highlight(buf, -1, abbreinder.config.output.floating_win.highlight, 0, 0, -1)
 
   vim.defer_fn(ui.close_floating_win, abbreinder.config.output.floating_win.time_open)
 end
@@ -50,9 +50,22 @@ function ui.close_floating_win()
 end
 
 
+local function highlight_unexpanded_abbr(abbreinder)
+
+  local line = vim.fn.getpos('.')[2]
+  local abbr_hl = vim.fn.matchaddpos(abbreinder.config.output.msg.highlight, {{line, abbreinder.abbr.start_idx, #abbreinder.abbr.val}})
+
+  if abbreinder.config.output.msg.highlight_time ~= -1 then
+    vim.defer_fn(function() vim.fn.matchdelete(abbr_hl) end, abbreinder.config.output.msg.highlight_time)
+  end
+end
+
+
 function ui.output_reminder(abbreinder, key, val)
 
   local msg = abbreinder.config.output.msg.format(key, val)
+
+  highlight_unexpanded_abbr(abbreinder)
 
   if abbreinder.config.output.as.floating_win then
     open_window(abbreinder, msg)
