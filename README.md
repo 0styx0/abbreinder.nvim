@@ -10,7 +10,7 @@ Abbreinder works by notifying you when you've typed the expanded form of an abbr
 #### Packer: 
 ```lua
   use {
-    'styx-meiseles/abbreinder',
+    'styx-meiseles/abbreinder.nvim',
     config = require('abbreinder').setup(<config>) -- <config> can be empty to stay with defaults
   }
 ```
@@ -46,5 +46,6 @@ While the config here will most likely be kept up to date, feel free to check ou
   + `AbbreinderAbbrNotExpanded`, called when an abbreviation is _not_ expanded (ie, used _incorrectly_)
 
 
-seees 
--- if it's a key, but not expanded. and spelled wrong. expand
+### Todo
++ Add `:help`
++ Add screenshots
