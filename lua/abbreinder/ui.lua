@@ -16,19 +16,20 @@ local function open_window(abbreinder, text)
   api.nvim_buf_set_option(buf, 'modifiable', false)
   api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>', {silent = true, nowait = true, noremap = true})
 
-  local _, row, col = vim.fn.getcurpos()
+  local pos = vim.fn.getpos('.')
+  local line = pos[2]
+  local col = pos[3]
 
   -- set some options
   local opts = {
-    style = "minimal",
-    relative = 'cursor',
-    bufpos = {1, 0},
+    style = 'minimal',
+    relative = 'editor',
     anchor = 'SE',
     width = #text,
     height = 1,
     focusable = false,
     noautocmd = true,
-    row = row,
+    row = line,
     col = col,
   }
 
