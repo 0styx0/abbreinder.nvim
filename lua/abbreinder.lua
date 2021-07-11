@@ -24,8 +24,10 @@ local function get_abbrevs()
 
   local abbrevs = api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
 
+  print(abbreinder.cache.abbrev_map['abbr'])
   if (abbreinder.cache.abbrevs == abbrevs) then
-    return abbreinder.abbrev_map_cache
+    print('cached')
+    return abbreinder.cache.abbrev_map
   end
   abbreinder.cache.abbrevs = abbrevs
 
@@ -37,7 +39,7 @@ local function get_abbrevs()
     local vim_abolish_escaped_val = val:gsub('^'..vim_abolish_delim, '')
     abbrev_map[key] = vim_abolish_escaped_val
   end
-  abbreinder.abbrev_map_cache = abbrev_map
+  abbreinder.cache.abbrev_map = abbrev_map
 
   return abbrev_map
 end
