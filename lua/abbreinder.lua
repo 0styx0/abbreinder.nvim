@@ -4,116 +4,109 @@ local default_config = require('abbreinder.config')
 local ui = require('abbreinder.ui')
 
 local abbreinder = {
-  cache = {
-    abbrevs = '',
-    abbrev_map = '',
-    source = '',
-  },
-  abbr = {
-    triggered = false,
-    key = '',
-    val = '',
-    start_idx = -1,
-    unexpanded = false
-  }
+    cache = {
+        abbrevs = '',
+        abbrev_map_key_value = '',
+        abbrev_map_value_key = '',
+        saved = ''
+    }
 }
 
 
 -- @Summary Parses neovim's list of abbrevations into a map
+-- Caches results, so only runs if new iabbrevs are added during session
 local function get_abbrevs()
 
-  local abbrevs = api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
+    local abbrevs = api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
 
-  if (abbreinder.cache.abbrevs == abbrevs) then
-    return abbreinder.cache.abbrev_map
-  end
-  abbreinder.cache.abbrevs = abbrevs
+    if (abbreinder.cache.abbrevs == abbrevs) then
+        return abbreinder.cache.abbrev_map_key_value
+    end
+    abbreinder.cache.abbrevs = abbrevs
 
 
-  local abbrev_map = {}
-  for key,val in abbrevs:gmatch("i%s%s(.-)%s%s*(.-)\n") do
+    local abbrev_map_key_value = {}
+    local abbrev_map_value_key = {}
 
-    local vim_abolish_delim = '*@'
-    local vim_abolish_escaped_val = val:gsub('^'..vim_abolish_delim, '')
-    abbrev_map[key] = vim_abolish_escaped_val
-    -- if key == 'abbr' then print ('abbr find') end
-  end
-  abbreinder.cache.abbrev_map = abbrev_map
+    for key,val in abbrevs:gmatch("i%s%s(.-)%s%s*(.-)\n") do
 
-  return abbrev_map
+        local vim_abolish_delim = '*@'
+        local vim_abolish_escaped_val = val:gsub('^'..vim_abolish_delim, '')
+        abbrev_map_key_value[key] = vim_abolish_escaped_val
+        abbrev_map_value_key[vim_abolish_escaped_val] = key
+        -- if key == 'abbr' then print ('abbr find') end
+    end
+    abbreinder.cache.abbrev_map_key_value = abbrev_map_key_value
+    abbreinder.cache.abbrev_map_value_key = abbrev_map_value_key
+
+    return abbrev_map_key_value
 end
 
 
-function abbreinder.check()
 
-  if abbreinder.abbr.triggered then
-    vim.cmd [[doautocmd User AbbreinderAbbrExpanded]]
-    -- print 'triggered'
-  end
+local function checkPastTypings(key)
 
-  if not abbreinder.abbr.triggered and abbreinder.abbr.key ~= '' then
+    get_abbrevs()
 
-    local text_to_search = abbreinder.config.source()
-    -- print('unexpanded: '..abbreinder.abbr.key..' val: '..abbreinder.abbr.val)
+    local value = abbreinder.cache.abbrev_map_key_value[key]
 
-    if text_to_search:find(abbreinder.abbr.val..' ', abbreinder.abbr.start_idx) ~= nil then
-
-      ui.output_reminder(abbreinder, abbreinder.abbr.key, abbreinder.abbr.val)
-      vim.cmd [[doautocmd User AbbreinderAbbrNotExpanded]]
+    if (key == nil or value == nil) then
+        return
     end
-  end
 
-  abbreinder.abbr.triggered = false
-  abbreinder.abbr.unexpanded = false
-  abbreinder.abbr.key = ''
-  abbreinder.abbr.start_idx = -1
+    -- format of saved will be `randomWords key value` for expanded abbreviation
+    -- or `randomWords value` for unexpanded
+    local expanded_abbr_start = abbreinder.cache.saved:find(key .. ' ' .. value)
+
+    if (expanded_abbr_start ~= nil) then
+        print('expanded found')
+        vim.cmd [[doautocmd User AbbreinderAbbrExpanded]]
+        abbreinder.cache.saved = ''
+        return
+    end
+
+    local unexpanded_abbr_start = abbreinder.cache.saved:find(value)
+    if (unexpanded_abbr_start ~= nil) then
+        print('unexpanded found')
+        vim.cmd [[doautocmd User AbbreinderAbbrUnexpanded]]
+        abbreinder.cache.saved = ''
+    end
 end
 
 function abbreinder.did_abbrev_trigger()
 
-  local text_to_search = abbreinder.config.source()
-  local abbrev_map = get_abbrevs()
-  -- print(abbrev_map['abbr'])
 
-  -- print('did_trg: '..abbreinder.abbr.key)
-  -- fname = characters that expand abbreviations. see :help abbreviations
-  local cur_char_is_abbr_expanding = vim.fn.fnameescape(vim.v.char) ~= vim.v.char
+    abbreinder.cache.saved = abbreinder.cache.saved .. vim.v.char
 
-  -- get the start/end indices of abbr. so later can tell if abbr expanded or not
-  local start_idx, end_idx = text_to_search:find('%S+')
-
-  while start_idx ~= nil do
-
-    local potential_key = text_to_search:sub(start_idx, end_idx)
-  --for potential_key in text_to_search:gmatch('%S+') do
-
-    -- if key typed previously, but now not expanding character
-    local abbr_key_typed = abbrev_map[potential_key] ~= nil
-
-    if abbr_key_typed then
-      abbreinder.abbr.key = potential_key
-      abbreinder.abbr.val = abbrev_map[potential_key]
-      abbreinder.abbr.start_idx = start_idx
+    -- fname = characters that expand abbreviations.
+    local cur_char_is_abbr_expanding = vim.fn.fnameescape(vim.v.char) ~= vim.v.char
+    if (not cur_char_is_abbr_expanding) then
+        return
     end
 
-    if abbr_key_typed and cur_char_is_abbr_expanding then
-      abbreinder.abbr.triggered = true
-    end
 
-    start_idx, end_idx = text_to_search:find('%S+', end_idx + 1)
-  end
+    local text_to_search = abbreinder.config.source()
+
+    local word_start, word_end = text_to_search:find('%S+')
+    while word_start ~= nil do
+
+        local potential_key = text_to_search:sub(word_start, word_end)
+        checkPastTypings(abbreinder.cache.abbrev_map_value_key[potential_key])
+
+        word_start, word_end = text_to_search:find('%S+', word_end + 1)
+    end
 end
+
 
 
 abbreinder.create_commands = function()
 
-  vim.cmd([[
-  augroup Abbreinder
-    autocmd!
-    autocmd InsertCharPre * :lua require('abbreinder').did_abbrev_trigger()
-    autocmd ]]..abbreinder.config.run_on..[[ * :lua require('abbreinder').check()
-  augroup END
-  ]])
+    vim.cmd([[
+        augroup Abbreinder
+            autocmd!
+            autocmd InsertCharPre * :lua require('abbreinder').did_abbrev_trigger()
+        augroup END
+    ]])
 
 end
 
@@ -123,12 +116,12 @@ end
 -- @Param config(table) - user specified config
 function abbreinder.setup(user_config)
 
-  user_config = user_config or {}
+    -- print('hello -abbrs')
+    user_config = user_config or {}
 
-  abbreinder.config = vim.tbl_extend('force', default_config, user_config)
+    abbreinder.config = vim.tbl_extend('force', default_config, user_config)
 
-  abbreinder.create_commands()
+    abbreinder.create_commands()
 end
 
 return abbreinder
-
