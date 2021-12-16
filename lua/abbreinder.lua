@@ -8,8 +8,8 @@ local abbreinder = {
         abbrevs = '',
         abbrev_map_value_trigger = {},
         multiword_abbrev_map = {},
-        keylogger = ''
-    }
+    },
+    keylogger = ''
 }
 
 
@@ -37,6 +37,7 @@ local function get_abbrevs_val_trigger()
 
     for trigger, val in abbrevs:gmatch("i%s%s(.-)%s%s*(.-)\n") do
 
+        -- support for plugins such as vim-abolish, which adds prefix
         for _, prefix in ipairs(abbreinder.config.value_prefixes) do
             val = val:gsub('^'..prefix, '')
         end
@@ -59,28 +60,23 @@ end
 
 -- @Summary checks if abbreviation functionality was used.
 -- if value was manually typed, notify user
--- @return true if a valid abbreviation (expanded or not) was found
 local function check_abbrev_expanded(trigger, value)
 
     -- format of keylogger will be `randomWords trigger value` for expanded abbreviation
     -- or `randomWords value` for unexpanded
-    local expanded_start = abbreinder.cache.keylogger:find(trigger .. ' ' .. value)
+    local expanded_start = abbreinder.keylogger:find(trigger .. ' ' .. value)
 
     if (expanded_start ~= nil) then
-        print('expanded found')
         vim.cmd [[doautocmd User AbbreinderAbbrExpanded]]
-        abbreinder.cache.keylogger = ''
-        return true
+        abbreinder.keylogger = ''
     end
 
-    local unexpanded_start = abbreinder.cache.keylogger:find(value)
+    local unexpanded_start = abbreinder.keylogger:find(value)
 
     if (unexpanded_start ~= nil) then
-        print('unexpanded found')
-        ui.highlight_unexpanded_abbr(abbreinder, value)
-        vim.cmd [[doautocmd User AbbreinderAbbrUnexpanded]]
-        abbreinder.cache.keylogger = ''
-        return true
+        ui.output_reminder(abbreinder, trigger, value)
+        vim.cmd [[doautocmd User AbbreinderAbbrNotExpanded]]
+        abbreinder.keylogger = ''
     end
 end
 
@@ -88,16 +84,17 @@ end
 -- an abbreviation-expanding character, to see if an abbreviation has been used
 function abbreinder.find_abbrev()
 
-    abbreinder.cache.keylogger = abbreinder.cache.keylogger .. vim.v.char
+    local cur_char = vim.v.char
+    abbreinder.keylogger = abbreinder.keylogger .. cur_char
 
     -- fname = characters that expand abbreviations.
-    local cur_char_is_abbr_expanding = vim.fn.fnameescape(vim.v.char) ~= vim.v.char
+    local cur_char_is_abbr_expanding = vim.fn.fnameescape(cur_char) ~= cur_char
     if (not cur_char_is_abbr_expanding) then
         return
     end
 
 
-    local text_to_search = abbreinder.cache.keylogger
+    local text_to_search = abbreinder.keylogger
 
     local word_start, word_end = text_to_search:find('%S+')
     while word_start ~= nil do
@@ -121,8 +118,15 @@ function abbreinder.find_abbrev()
     end
 end
 
+local function create_commands()
 
-abbreinder.create_commands = function()
+    vim.cmd([[
+    command! -bang AbbreinderEnable lua require('abbreinder').create_autocmds()
+    command! -bang AbbreinderDisable autocmd! Abbreinder
+    ]])
+end
+
+function abbreinder.create_autocmds()
 
     vim.cmd([[
     augroup Abbreinder
@@ -130,7 +134,6 @@ abbreinder.create_commands = function()
     autocmd InsertCharPre * :lua require('abbreinder').find_abbrev()
     augroup END
     ]])
-
 end
 
 
@@ -143,7 +146,8 @@ function abbreinder.setup(user_config)
 
     abbreinder.config = vim.tbl_extend('force', default_config, user_config)
 
-    abbreinder.create_commands()
+    create_commands()
+    abbreinder.create_autocmds()
 end
 
 return abbreinder

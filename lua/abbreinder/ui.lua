@@ -1,9 +1,28 @@
 local api = vim.api;
 local ui = {
-    floating_win = {},
+    tooltip = {},
 }
 
-local function open_window(abbreinder, text)
+local function getCoordinates(value)
+
+    local pos = vim.fn.getpos('.')
+    local line_num = pos[2] - 1 -- -1 because functions are zero-indexed
+    local col_num = pos[3] - 1
+    local abbr_start = col_num - #value
+    local abbr_len = abbr_start + #value
+
+    return line_num, abbr_start, abbr_len
+end
+
+local function close_tooltip(win_id)
+
+    if api.nvim_win_is_valid(win_id) then
+        api.nvim_win_close(win_id, true)
+    end
+end
+
+
+local function open_window(abbreinder, value, text)
 
     local buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
 
@@ -12,56 +31,45 @@ local function open_window(abbreinder, text)
     api.nvim_buf_set_option(buf, 'buftype', 'nofile')
     api.nvim_buf_set_lines(buf, 0, -1, true, {text})
     api.nvim_buf_set_option(buf, 'modifiable', false)
-    api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>', {silent = true, nowait = true, noremap = true})
+    api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>',
+        {silent = true, nowait = true, noremap = true})
 
-    local pos = vim.fn.getpos('.')
-    local line = pos[2]
-    local col = pos[3]
+    local line_num, abbr_start = getCoordinates(value)
 
     -- set some options
     local opts = {
         style = 'minimal',
         relative = 'win',
-        anchor = 'SE',
+        anchor = 'SW',
         width = #text,
         height = 1,
         focusable = false,
         noautocmd = true,
-        --bufpos = {line, col},
-        row = line - 1,
-        col = col,
-        -- border = 'solid',
+        bufpos = {line_num, abbr_start},
     }
 
-    opts = vim.tbl_extend('force', opts, abbreinder.config.output.floating_win.opts)
+    opts = vim.tbl_extend('force', opts, abbreinder.config.output.tooltip.opts)
 
     -- and finally create it with buffer attached
     local id = api.nvim_open_win(buf, false, opts)
-    api.nvim_buf_add_highlight(buf, -1, abbreinder.config.output.floating_win.highlight, 0, 0, -1)
+    api.nvim_buf_add_highlight(buf, -1, abbreinder.config.output.tooltip.highlight, 0, 0, -1)
 
-    vim.defer_fn(function() ui.close_floating_win(id) end, abbreinder.config.output.floating_win.time_open)
+    vim.defer_fn(
+        function() close_tooltip(id) end,
+        abbreinder.config.output.tooltip.time_open
+    )
 end
 
 
-function ui.close_floating_win(win_id)
+local function highlight_unexpanded_abbr(abbreinder, value)
 
-    if api.nvim_win_is_valid(win_id) then
-        api.nvim_win_close(win_id, true)
-    end
-end
-
-function ui.highlight_unexpanded_abbr(abbreinder, value)
-
-    local pos = vim.fn.getpos('.')
-    local line_num = pos[2] - 1 -- add_highlight zero indexed
-    local col_num = pos[3] - 1
-    local abbr_start = col_num - #value
-    local abbr_len = (abbr_start) + #value
+    local line_num, abbr_start, abbr_len = getCoordinates(value)
 
     local ns_id = api.nvim_buf_add_highlight(0, 0, abbreinder.config.output.msg.highlight,
         line_num, abbr_start,  abbr_len)
 
     if abbreinder.config.output.msg.highlight_time ~= -1 then
+
         vim.defer_fn(function()
             api.nvim_buf_clear_namespace(0, ns_id, line_num, line_num + 1)
         end, abbreinder.config.output.msg.highlight_time)
@@ -69,14 +77,18 @@ function ui.highlight_unexpanded_abbr(abbreinder, value)
 end
 
 
-function ui.output_reminder(abbreinder, key, val, start)
+function ui.output_reminder(abbreinder, trigger, value)
 
-    local msg = abbreinder.config.output.msg.format(key, val)
+    local msg = abbreinder.config.output.msg.format(trigger, value)
 
-    highlight_unexpanded_abbr(abbreinder, start)
+    highlight_unexpanded_abbr(abbreinder, value)
 
-    if abbreinder.config.output.as.floating_win then
-        open_window(abbreinder, msg)
+    if abbreinder.config.output.as.tooltip then
+        -- if not deferred, E523 because can't manipulate buffers
+        -- on InsertCharPre
+        vim.defer_fn(function()
+            open_window(abbreinder, value, msg)
+        end, 0)
     end
 
     if (abbreinder.config.output.as.echo) then

@@ -2,23 +2,26 @@
 local config_defaults = {
   output = {
     as = {
-      echo = true,
-      floating_win = true,
+      echo = false,
+      tooltip = true,
     },
     msg = {
       format = function(key, val) -- format to print reminder in
         return 'abbrev: "'..key..'"->'..'"'..val..'"'
       end,
-      highlight = 'Special',
-      highlight_time = 5000 -- if want highlight to stop after x ms. -1 for permanent highlight
+      highlight = 'Special', -- highlight to use
+      -- if want highlight to stop after x ms. -1 for permanent highlight
+      highlight_time = 4000
     },
-    floating_win = { -- only takes effect if output_as.floating_win = true
-      time_open = 5000, -- time before float closes
+    tooltip = { -- only takes effect if output_as.tooltip = true
+      time_open = 4000, -- time before tooltip closes
       opts = {}, -- see :help nvim_open_win
       highlight = 'Special'
     },
   },
-  value_prefixes = {'*@'} -- vim-abolish prefixes each abbreviation value
+  -- vim-abolish prefixes each abbreviation value.
+  -- adding prefixes here accounts for them
+  value_prefixes = {'*@'}
 }
 
 return config_defaults
