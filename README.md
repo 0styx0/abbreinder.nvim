@@ -81,8 +81,3 @@ While the config here will most likely be kept up to date, feel free to check ou
 + Add `:help`
 + Add screenshots
 
-
-
-if delete word, delete floating win and highlight
-use same ns for same key-value
-

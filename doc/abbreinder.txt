@@ -1,6 +1,6 @@
 *abbreinder.txt*
 
-Author: Styx <foss@0styx0.xyz>
+Author: Styx Meiseles <foss@0styx0.xyz>
 
 Goals                                                   *abbreinder* *:Abbreinder*
 
