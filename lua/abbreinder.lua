@@ -95,6 +95,8 @@ function abbreinder.find_abbrev()
 
 
     local text_to_search = abbreinder.keylogger
+    print('text: '..text_to_search)
+    print('esc: '..vim.fn.fnameescape(text_to_search))
 
     local word_start, word_end = text_to_search:find('%S+')
     while word_start ~= nil do
@@ -126,12 +128,18 @@ local function create_commands()
     ]])
 end
 
+function abbreinder.clear_keylogger()
+    -- doing this on bufread fixes bug where characters C> are part of keylogger string
+    abbreinder.keylogger = ''
+end
+
 function abbreinder.create_autocmds()
 
     vim.cmd([[
     augroup Abbreinder
     autocmd!
     autocmd InsertCharPre * :lua require('abbreinder').find_abbrev()
+    autocmd BufReadPre * :lua require('abbreinder').clear_keylogger()
     augroup END
     ]])
 end

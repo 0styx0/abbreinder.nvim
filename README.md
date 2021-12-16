@@ -86,4 +86,3 @@ While the config here will most likely be kept up to date, feel free to check ou
 if delete word, delete floating win and highlight
 use same ns for same key-value
 
-if at start of line and just opened file, not triggered
