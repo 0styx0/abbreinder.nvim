@@ -95,8 +95,6 @@ function abbreinder.find_abbrev()
 
 
     local text_to_search = abbreinder.keylogger
-    print('text: '..text_to_search)
-    print('esc: '..vim.fn.fnameescape(text_to_search))
 
     local word_start, word_end = text_to_search:find('%S+')
     while word_start ~= nil do
