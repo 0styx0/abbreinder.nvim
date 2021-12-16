@@ -22,7 +22,7 @@ local function close_tooltip(win_id)
 end
 
 
-local function open_window(abbreinder, value, text)
+local function open_tooltip(abbreinder, value, text)
 
     local buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
 
@@ -87,7 +87,7 @@ function ui.output_reminder(abbreinder, trigger, value)
         -- if not deferred, E523 because can't manipulate buffers
         -- on InsertCharPre
         vim.defer_fn(function()
-            open_window(abbreinder, value, msg)
+            open_tooltip(abbreinder, value, msg)
         end, 0)
     end
 
