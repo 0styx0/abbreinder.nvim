@@ -1,7 +1,5 @@
 
 local config_defaults = {
-  source = vim.api.nvim_get_current_line, -- function called to obtain text to parse
-  run_on = 'TextChangedI,TextChanged', -- autocmds to run plugin on
   output = {
     as = {
       echo = true,
@@ -20,6 +18,7 @@ local config_defaults = {
       highlight = 'BlueItalic'
     },
   },
+  value_prefixes = {'*@'} -- vim-abolish prefixes each abbreviation value
 }
 
 return config_defaults

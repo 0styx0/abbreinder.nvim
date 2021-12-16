@@ -51,10 +51,10 @@ function ui.close_floating_win(win_id)
 end
 
 
-local function highlight_unexpanded_abbr(abbreinder)
+local function highlight_unexpanded_abbr(abbreinder, start)
 
   local line = vim.fn.getpos('.')[2]
-  local abbr_hl = vim.fn.matchaddpos(abbreinder.config.output.msg.highlight, {{line, abbreinder.abbr.start_idx, #abbreinder.abbr.val}})
+  local abbr_hl = vim.fn.matchaddpos(abbreinder.config.output.msg.highlight, {{line, start, #abbreinder.abbr.val}})
 
   if abbreinder.config.output.msg.highlight_time ~= -1 then
     vim.defer_fn(function() vim.fn.matchdelete(abbr_hl) end, abbreinder.config.output.msg.highlight_time)
@@ -62,11 +62,11 @@ local function highlight_unexpanded_abbr(abbreinder)
 end
 
 
-function ui.output_reminder(abbreinder, key, val)
+function ui.output_reminder(abbreinder, key, val, start)
 
   local msg = abbreinder.config.output.msg.format(key, val)
 
-  highlight_unexpanded_abbr(abbreinder)
+  highlight_unexpanded_abbr(abbreinder, start)
 
   if abbreinder.config.output.as.floating_win then
     open_window(abbreinder, msg)
