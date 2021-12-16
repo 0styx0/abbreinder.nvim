@@ -4,8 +4,10 @@ I often come up with abbreviations that _should_ make typing faster, yet I often
 This dilemma especially comes up when I create abbreviations using Tim Pope's [vim-abolish](https://github.com/tpope/vim-abolish) - I create hundreds of abbreviations, but can't take full advantage of them.
 Abbreinder works by notifying you when you've typed the expanded form of an abbreviation (either created through vanilla neovim's `abbrev` commands, or through `Abolish`. It is designed to be as configurable as possible, so these notifications may be displayed in a variety of ways, depending on how you specify.
 
-point of view treated as unexpanded
+rename to abbreinder.nvim
 
+nvim_buf_attach({buffer}, {send_buffer}, {opts})           *nvim_buf_attach()*
+onchangetick
 ### Installation
 
 #### Packer:
