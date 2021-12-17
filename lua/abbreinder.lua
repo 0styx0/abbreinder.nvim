@@ -96,12 +96,15 @@ function abbreinder.find_abbrev()
 
     local text_to_search = abbreinder.keylogger
 
-    local word_start, word_end = text_to_search:find('%S+')
+    local pattern = '%a+'
+    local word_start, word_end = text_to_search:find(pattern)
     while word_start ~= nil do
 
         local value_trigger, multiword_map = get_abbrevs_val_trigger()
         local potential_value = text_to_search:sub(word_start, word_end)
         local potential_trigger = value_trigger[potential_value]
+
+        -- print(potential_value)
 
         local potential_multiword_abbrev = multiword_map[potential_value] ~= nil
         if (potential_multiword_abbrev) then
@@ -114,7 +117,7 @@ function abbreinder.find_abbrev()
             check_abbrev_expanded(potential_trigger, potential_value)
         end
 
-        word_start, word_end = text_to_search:find('%S+', word_end + 1)
+        word_start, word_end = text_to_search:find(pattern, word_end + 1)
     end
 end
 
