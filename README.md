@@ -4,6 +4,8 @@
 + [Commands](#commands)
 + [Exports](#exports)
 
+Note: This plugin is still in alpha. I'm currently writing tests for it and fixing bugs as I find them.
+
 ---
 
 ### Usecase
@@ -75,9 +77,4 @@ While the config here will most likely be kept up to date, feel free to check ou
   + `AbbreinderAbbrExpanded`, called when an abbreviations is expanded (ie, used correctly)
   + `AbbreinderAbbrNotExpanded`, called when an abbreviation is _not_ expanded (ie, abbreviation functionality was not used)
 
----
-
-### Todo
-+ Add `:help`
-+ Add screenshots
 
