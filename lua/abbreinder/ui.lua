@@ -5,13 +5,16 @@ local ui = {
 
 local function getCoordinates(value)
 
+    -- '.' because the cursor is somewhere else
     local pos = vim.fn.getpos('.')
     local line_num = pos[2] - 1 -- -1 because functions are zero-indexed
-    local col_num = pos[3] - 1
-    local abbr_start = col_num - #value
-    local abbr_len = abbr_start + #value
 
-    return line_num, abbr_start, abbr_len
+    local line = vim.fn.getline('.')
+    local value_start, value_end = line:find('('..value..')%A*$')
+
+    value_start = value_start - 1
+
+    return line_num, value_start, value_end
 end
 
 local function close_tooltip(win_id)
