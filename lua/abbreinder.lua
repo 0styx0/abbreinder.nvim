@@ -9,7 +9,9 @@ local abbreinder = {
         abbrev_map_value_trigger = {},
         multiword_abbrev_map = {},
     },
-    keylogger = ''
+    keylogger = '',
+    trigger_value_separator = '%A',
+    abbr_pattern = '%a+'
 }
 
 
@@ -59,25 +61,35 @@ end
 
 
 -- @Summary checks if abbreviation functionality was used.
--- if value was manually typed, notify user
-local function check_abbrev_expanded(trigger, value)
+--   if value was manually typed, notify user
+-- @return {-1, 0, 1} - if no abbreviation found (0), if user typed out the full value
+--   instead of using trigger (0), if it was triggered properly (1)
+local function check_abbrev_remembered(trigger, value)
 
     -- format of keylogger will be `randomWords trigger value` for expanded abbreviation
     -- or `randomWords value` for unexpanded
-    local expanded_start = abbreinder.keylogger:find(trigger .. ' ' .. value)
+    local expanded_start = abbreinder.keylogger:find(trigger .. abbreinder.trigger_value_separator .. value)
 
-    if (expanded_start ~= nil) then
+    local abbr_remembered = expanded_start ~= nil
+    if (abbr_remembered) then
         vim.cmd [[doautocmd User AbbreinderAbbrExpanded]]
         abbreinder.keylogger = ''
+        return 1
     end
 
     local unexpanded_start = abbreinder.keylogger:find(value)
 
-    if (unexpanded_start ~= nil) then
+    local abbr_forgotten = unexpanded_start ~= nil
+    if (abbr_forgotten) then
+        -- print('trigger: '..trigger)
+        -- print('keylog: '..abbreinder.keylogger)
         ui.output_reminder(abbreinder, trigger, value)
         vim.cmd [[doautocmd User AbbreinderAbbrNotExpanded]]
         abbreinder.keylogger = ''
+        return 0
     end
+
+    return -1
 end
 
 -- @Summary searches through what has been typed since the user last typed
@@ -86,18 +98,19 @@ function abbreinder.find_abbrev()
 
     local cur_char = vim.v.char
     abbreinder.keylogger = abbreinder.keylogger .. cur_char
+    local abbr_remembered = -1
 
-    -- fname = characters that expand abbreviations.
-    local cur_char_is_abbr_expanding = vim.fn.fnameescape(cur_char) ~= cur_char
+    local cur_char_is_abbr_expanding = cur_char:match(abbreinder.trigger_value_separator)
     if (not cur_char_is_abbr_expanding) then
-        return
+        return abbr_remembered
     end
 
 
     local text_to_search = abbreinder.keylogger
 
-    local pattern = '%a+'
+    local pattern = abbreinder.abbr_pattern
     local word_start, word_end = text_to_search:find(pattern)
+
     while word_start ~= nil do
 
         local value_trigger, multiword_map = get_abbrevs_val_trigger()
@@ -110,15 +123,18 @@ function abbreinder.find_abbrev()
         if (potential_multiword_abbrev) then
             local multi_value = multiword_map[potential_value]
             local multi_trigger = value_trigger[multi_value]
-            check_abbrev_expanded(multi_trigger, multi_value)
+            abbr_remembered = check_abbrev_remembered(multi_trigger, multi_value)
+        elseif (potential_trigger ~= nil and potential_value ~= nil) then
+            abbr_remembered = check_abbrev_remembered(potential_trigger, potential_value)
         end
 
-        if (potential_trigger ~= nil and potential_value ~= nil) then
-            check_abbrev_expanded(potential_trigger, potential_value)
-        end
+        -- todo: if abbr_remembered then break?
+        -- todo: is there a better way to search? only check after tests pass
 
         word_start, word_end = text_to_search:find(pattern, word_end + 1)
     end
+
+    return abbr_remembered
 end
 
 local function create_commands()
