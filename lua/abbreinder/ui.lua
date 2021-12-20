@@ -3,16 +3,15 @@ local ui = {
     tooltip = {},
 }
 
-local function getCoordinates(value)
+-- @return zero indexed current line num, index of value on line, index of value end
+function ui.get_coordinates(value)
 
-    -- '.' because the cursor is somewhere else
-    local pos = vim.fn.getpos('.')
-    local line_num = pos[2] - 1 -- -1 because functions are zero-indexed
+    local pos = vim.fn.getcurpos()
+    local line_num = pos[2]
+    local col_num = pos[3]
 
-    local line = vim.fn.getline('.')
-    local value_start, value_end = line:find('('..value..')%A*$')
-
-    value_start = value_start - 1
+    local value_start = col_num - #value - 1
+    local value_end = col_num - 1
 
     return line_num, value_start, value_end
 end
@@ -37,7 +36,7 @@ local function open_tooltip(abbreinder, value, text)
     api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>',
         {silent = true, nowait = true, noremap = true})
 
-    local line_num, abbr_start = getCoordinates(value)
+    local line_num, abbr_start = ui.get_coordinates(value)
 
     -- set some options
     local opts = {
@@ -63,18 +62,16 @@ local function open_tooltip(abbreinder, value, text)
     )
 end
 
-
 local function highlight_unexpanded_abbr(abbreinder, value)
 
-    local line_num, abbr_start, abbr_len = getCoordinates(value)
+    local line_num, abbr_start, abbr_len = ui.get_coordinates(value)
 
-    local ns_id = api.nvim_buf_add_highlight(0, 0, abbreinder.config.output.msg.highlight,
+    local ns = api.nvim_buf_add_highlight(0, -1, abbreinder.config.output.msg.highlight,
         line_num, abbr_start,  abbr_len)
 
     if abbreinder.config.output.msg.highlight_time ~= -1 then
-
         vim.defer_fn(function()
-            api.nvim_buf_clear_namespace(0, ns_id, line_num, line_num + 1)
+            api.nvim_buf_clear_namespace(0, ns, line_num, line_num + 1)
         end, abbreinder.config.output.msg.highlight_time)
     end
 end
