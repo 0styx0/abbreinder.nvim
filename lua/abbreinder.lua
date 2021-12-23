@@ -9,9 +9,7 @@ local abbreinder = {
         abbrev_map_value_trigger = {},
         multiword_abbrev_map = {},
     },
-    keylogger = '',
-    trigger_value_separator = '%A',
-    abbr_pattern = '%a+'
+    _keylogger = '',
 }
 
 
@@ -64,28 +62,30 @@ end
 --   if value was manually typed, notify user
 -- @return {-1, 0, 1} - if no abbreviation found (0), if user typed out the full value
 --   instead of using trigger (0), if it was triggered properly (1)
-local function check_abbrev_remembered(trigger, value)
+function abbreinder._check_abbrev_remembered(trigger, value)
 
-    -- format of keylogger will be `randomWords trigger value` for expanded abbreviation
-    -- or `randomWords value` for unexpanded
-    local expanded_start = abbreinder.keylogger:find(trigger .. abbreinder.trigger_value_separator .. value)
+    local value_trigger = abbreinder._get_abbrevs_val_trigger()
+    local abbr_exists = value_trigger[value] == trigger
+    if (not abbr_exists) then
+        return -1
+    end
 
-    local abbr_remembered = expanded_start ~= nil
+    local expanded_reg = vim.regex(trigger .. '[^[:keyword:]]' .. value)
+    local abbr_remembered = expanded_reg:match_str(abbreinder._keylogger)
+
     if (abbr_remembered) then
         vim.cmd [[doautocmd User AbbreinderAbbrExpanded]]
-        abbreinder.keylogger = ''
+        abbreinder._keylogger = ''
         return 1
     end
 
-    local unexpanded_start = abbreinder.keylogger:find(value)
+    local forgotten_reg = vim.regex(value .. '[^[:keyword:]]')
+    local abbr_forgotten = forgotten_reg:match_str(abbreinder._keylogger)
 
-    local abbr_forgotten = unexpanded_start ~= nil
     if (abbr_forgotten) then
-        -- print('trigger: '..trigger)
-        -- print('keylog: '..abbreinder.keylogger)
         ui.output_reminder(abbreinder, trigger, value)
         vim.cmd [[doautocmd User AbbreinderAbbrNotExpanded]]
-        abbreinder.keylogger = ''
+        abbreinder._keylogger = ''
         return 0
     end
 
@@ -123,9 +123,9 @@ function abbreinder.find_abbrev()
         if (potential_multiword_abbrev) then
             local multi_value = multiword_map[potential_value]
             local multi_trigger = value_trigger[multi_value]
-            abbr_remembered = check_abbrev_remembered(multi_trigger, multi_value)
+            abbr_remembered = abbreinder._check_abbrev_remembered(multi_trigger, multi_value)
         elseif (potential_trigger ~= nil and potential_value ~= nil) then
-            abbr_remembered = check_abbrev_remembered(potential_trigger, potential_value)
+            abbr_remembered = abbreinder._check_abbrev_remembered(potential_trigger, potential_value)
         end
 
         -- todo: if abbr_remembered then break?
@@ -147,7 +147,7 @@ end
 
 function abbreinder.clear_keylogger()
     -- doing this on bufread fixes bug where characters C> are part of keylogger string
-    abbreinder.keylogger = ''
+    abbreinder._keylogger = ''
 end
 
 function abbreinder.create_autocmds()
