@@ -209,6 +209,7 @@ function abbreinder.enable()
     abbreinder._should_stop = false
     create_ex_commands()
     abbreinder.create_autocmds()
+    abbreinder.start()
 end
 
 
