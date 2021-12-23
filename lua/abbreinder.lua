@@ -92,46 +92,48 @@ function abbreinder._check_abbrev_remembered(trigger, value)
     return -1
 end
 
+
 -- @Summary searches through what has been typed since the user last typed
 -- an abbreviation-expanding character, to see if an abbreviation has been used
 function abbreinder.find_abbrev()
 
     local cur_char = vim.v.char
-    abbreinder.keylogger = abbreinder.keylogger .. cur_char
+    abbreinder._keylogger = abbreinder._keylogger .. cur_char
     local abbr_remembered = -1
 
-    local cur_char_is_abbr_expanding = cur_char:match(abbreinder.trigger_value_separator)
-    if (not cur_char_is_abbr_expanding) then
+    local keyword_regex = vim.regex('[[:keyword:]]')
+    local not_trigger_char = keyword_regex:match_str(cur_char)
+    if (not_trigger_char) then
         return abbr_remembered
     end
 
+    local text_to_search = abbreinder._keylogger
 
-    local text_to_search = abbreinder.keylogger
+    -- value + trigger char
+    local value_regex = vim.regex('[[:keyword:]]\\+[^[:keyword:]]$')
+    local val_start,val_end = value_regex:match_str(text_to_search)
+    if val_start == nil then
+        return -1
+    end
 
-    local pattern = abbreinder.abbr_pattern
-    local word_start, word_end = text_to_search:find(pattern)
+    val_start = val_start + 1
+    val_end = val_end - 1
+    -- match_str doesn't support capture groups
+    local potential_value = text_to_search:sub(val_start, val_end)
 
-    while word_start ~= nil do
+    local value_trigger, multiword_map = abbreinder._get_abbrevs_val_trigger()
+    local potential_trigger = value_trigger[potential_value]
 
-        local value_trigger, multiword_map = abbreinder._get_abbrevs_val_trigger()
-        local potential_value = text_to_search:sub(word_start, word_end)
-        local potential_trigger = value_trigger[potential_value]
+    local potential_multiword_abbrev = multiword_map[potential_value] ~= nil
+    if (potential_multiword_abbrev) then
+        local multi_value = multiword_map[potential_value]
+        local multi_trigger = value_trigger[multi_value]
+        abbr_remembered = abbreinder._check_abbrev_remembered(multi_trigger, multi_value)
+        return abbr_remembered, multi_trigger, multi_value
 
-        -- print(potential_value)
-
-        local potential_multiword_abbrev = multiword_map[potential_value] ~= nil
-        if (potential_multiword_abbrev) then
-            local multi_value = multiword_map[potential_value]
-            local multi_trigger = value_trigger[multi_value]
-            abbr_remembered = abbreinder._check_abbrev_remembered(multi_trigger, multi_value)
-        elseif (potential_trigger ~= nil and potential_value ~= nil) then
-            abbr_remembered = abbreinder._check_abbrev_remembered(potential_trigger, potential_value)
-        end
-
-        -- todo: if abbr_remembered then break?
-        -- todo: is there a better way to search? only check after tests pass
-
-        word_start, word_end = text_to_search:find(pattern, word_end + 1)
+    elseif (potential_trigger) then
+        abbr_remembered = abbreinder._check_abbrev_remembered(potential_trigger, potential_value)
+        return abbr_remembered, potential_trigger, potential_value
     end
 
     return abbr_remembered
