@@ -47,7 +47,7 @@ local function open_tooltip(abbreinder, value, text)
         height = 1,
         focusable = false,
         noautocmd = true,
-        bufpos = {line_num, abbr_start},
+        bufpos = {line_num - 1, abbr_start},
     }
 
     opts = vim.tbl_extend('force', opts, abbreinder.config.output.tooltip.opts)
@@ -67,7 +67,7 @@ local function highlight_unexpanded_abbr(abbreinder, value)
     local line_num, abbr_start, abbr_len = ui.get_coordinates(value)
 
     local ns = api.nvim_buf_add_highlight(0, -1, abbreinder.config.output.msg.highlight,
-        line_num, abbr_start,  abbr_len)
+        line_num - 1, abbr_start,  abbr_len)
 
     if abbreinder.config.output.msg.highlight_time ~= -1 then
         vim.defer_fn(function()

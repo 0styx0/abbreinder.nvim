@@ -4,7 +4,7 @@ local default_config = require('abbreinder.config')
 local ui = require('abbreinder.ui')
 
 local abbreinder = {
-    cache = {
+    _cache = {
         abbrevs = '',
         abbrev_map_value_trigger = {},
         multiword_abbrev_map = {},
@@ -18,18 +18,18 @@ local abbreinder = {
 -- @Summary Parses neovim's list of abbrevations into a map
 -- Caches results, so only runs if new iabbrevs are added during session
 -- @return two maps - {trigger, value} and for multiword abbrevs, {last_word_of_value, full_value}
-local function get_abbrevs_val_trigger()
+function abbreinder._get_abbrevs_val_trigger()
 
     local abbrevs = api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
 
-    if (abbreinder.cache.abbrevs == abbrevs) then
+    if (abbreinder._cache.abbrevs == abbrevs) then
 
-        return abbreinder.cache.abbrev_map_value_trigger,
-            abbreinder.cache.abbrev_map_multiword
+        return abbreinder._cache.abbrev_map_value_trigger,
+            abbreinder._cache.abbrev_map_multiword
     end
-    abbreinder.cache.abbrevs = abbrevs
+    abbreinder._cache.abbrevs = abbrevs
 
-    -- using {value, trigger} instead of {trigger, value} because
+    -- using {last_word_of_value, full_value} instead of {trigger, value} because
     -- the user types the value, not the trigger
     local abbrev_map_value_trigger = {}
 
@@ -53,8 +53,8 @@ local function get_abbrevs_val_trigger()
         abbrev_map_value_trigger[val] = trigger
     end
 
-    abbreinder.cache.abbrev_map_value_trigger = abbrev_map_value_trigger
-    abbreinder.cache.abbrev_map_multiword = abbrev_map_multiword
+    abbreinder._cache.abbrev_map_value_trigger = abbrev_map_value_trigger
+    abbreinder._cache.abbrev_map_multiword = abbrev_map_multiword
 
     return abbrev_map_value_trigger, abbrev_map_multiword
 end
@@ -113,7 +113,7 @@ function abbreinder.find_abbrev()
 
     while word_start ~= nil do
 
-        local value_trigger, multiword_map = get_abbrevs_val_trigger()
+        local value_trigger, multiword_map = abbreinder._get_abbrevs_val_trigger()
         local potential_value = text_to_search:sub(word_start, word_end)
         local potential_trigger = value_trigger[potential_value]
 

@@ -2,11 +2,10 @@ set rtp+=.
 set rtp+=./plenary.nvim
 set noswapfile
 runtime plugin/plenary.vim
+runtime plugin/abolish.vim
 
 
-" possible add runtime plugin/abolish.vim
-
-" set termguicolors " maybe needed for highlight testing?
+" note: if shada error, `rm ~/.local/share/nvim/shada/main.shada`
 
 lua << EOF
 require'abbreinder'.setup()
