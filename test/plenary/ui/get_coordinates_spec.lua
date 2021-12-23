@@ -27,12 +27,9 @@ local function get_coordinates_helper(value, beginning_text, end_text)
     assert.equals(expected_end, value_end, 'ending col index')
 end
 
+local function run_tests(test_case, value)
 
-describe('get_coordinates works correctly if', function()
-
-    describe('abbr is single word and', function()
-
-        local value = 'value'
+    describe('abbr is ' .. test_case .. ' word and', function()
 
         it('abbr value is first word on line', function()
 
@@ -72,45 +69,12 @@ describe('get_coordinates works correctly if', function()
         end)
     end)
 
+end
 
-    describe('abbr is multi word and', function()
+local cases = {['single'] = 'value', ['multi'] = 'point of view'}
+describe('get_coordinates works correctly if', function()
 
-        local value = 'point of view'
-
-        it('abbr value is first word on line', function()
-
-            local beginning_text = ''
-            local end_text = ''
-            get_coordinates_helper(value, beginning_text, end_text)
-        end)
-
-        it('abbr value is last word on line', function()
-
-            local beginning_text = 'here is some text '
-            local end_text = ''
-            get_coordinates_helper(value, beginning_text, end_text)
-        end)
-
-        it('abbr value is middle word on line', function()
-
-            local beginning_text = 'here is some text '
-            local end_text = ' even more'
-            get_coordinates_helper(value, beginning_text, end_text)
-        end)
-
-        it('value is first of two of the same values in a line', function()
-
-            local beginning_text = 'here is some text '
-            local end_text = ' even ' .. value .. ' more'
-            get_coordinates_helper(value, beginning_text, end_text)
-
-        end)
-
-        it('value is second of two of the same values in a line', function()
-
-            local beginning_text = 'here is ' .. value .. ' some text '
-            local end_text =  value .. ' more'
-            get_coordinates_helper(value, beginning_text, end_text)
-        end)
-    end)
+    for test_case,value in pairs(cases) do
+        run_tests(test_case, value)
+    end
 end)
