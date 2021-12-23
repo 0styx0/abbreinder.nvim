@@ -2,14 +2,15 @@ local assert = require('luassert.assert')
 local stub = require('luassert.stub')
 local abbreinder = require('abbreinder')
 local ui = require('abbreinder.ui')
+local helpers = require('test.plenary.helpers')
 
 describe('check_abbrev_remembered', function()
 
     local trigger = 'trigger'
     local value = 'my value'
-    local keyword = '_'
-    local non_keyword = '$'
-    vim.api.nvim_set_option('iskeyword', keyword)
+
+    -- removed at eof. plenary doesn't support teardown()
+    local keyword, non_keyword = helpers.set_keyword()
 
     stub(abbreinder, '_get_abbrevs_val_trigger').returns({[value] = trigger})
     before_each(function()
@@ -75,3 +76,5 @@ describe('check_abbrev_remembered', function()
         end)
     end)
 end)
+
+helpers.reset()
