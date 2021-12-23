@@ -10,6 +10,7 @@ local abbreinder = {
         multiword_abbrev_map = {},
     },
     _keylogger = '',
+    _should_stop = false,
 }
 
 
@@ -95,9 +96,8 @@ end
 
 -- @Summary searches through what has been typed since the user last typed
 -- an abbreviation-expanding character, to see if an abbreviation has been used
-function abbreinder.find_abbrev()
+function abbreinder.find_abbrev(cur_char)
 
-    local cur_char = vim.v.char
     abbreinder._keylogger = abbreinder._keylogger .. cur_char
     local abbr_remembered = -1
 
@@ -139,12 +139,31 @@ function abbreinder.find_abbrev()
     return abbr_remembered
 end
 
-local function create_commands()
 
-    vim.cmd([[
-    command! -bang AbbreinderEnable lua require('abbreinder').create_autocmds()
-    command! -bang AbbreinderDisable autocmd! Abbreinder
-    ]])
+function abbreinder.start()
+
+    vim.api.nvim_buf_attach(0, false, {
+
+        on_detach = abbreinder.clear_keylogger,
+
+        on_bytes = function(byte_str, buf, changed_tick, start_row, start_col, byte_offset, old_end_row, old_end_col, old_length, new_end_row, new_end_col, new_length)
+
+            if abbreinder._should_stop then
+                return true
+            end
+
+            local line = vim.api.nvim_buf_get_lines(0, start_row, start_row + 1, true)[1]
+            local cur_char = line:sub(start_col + 1, start_col + 1)
+
+            local user_backspaced = new_end_col == old_end_col - 1 and
+                new_end_row == old_end_row and new_length == 0
+            if user_backspaced then
+                abbreinder._keylogger = abbreinder._keylogger:sub(1, -2)
+            else
+                abbreinder.find_abbrev(cur_char)
+            end
+        end
+    })
 end
 
 function abbreinder.clear_keylogger()
@@ -152,15 +171,44 @@ function abbreinder.clear_keylogger()
     abbreinder._keylogger = ''
 end
 
+local function create_ex_commands()
+
+    vim.cmd([[
+    command! -bang AbbreinderEnable lua require('abbreinder').enable()
+    command! -bang AbbreinderDisable lua require('abbreinder').disable()
+    ]])
+end
+
+
 function abbreinder.create_autocmds()
 
     vim.cmd([[
     augroup Abbreinder
     autocmd!
-    autocmd InsertCharPre * :lua require('abbreinder').find_abbrev()
     autocmd BufReadPre * :lua require('abbreinder').clear_keylogger()
+    autocmd BufReadPre * :lua require('abbreinder').start()
     augroup END
     ]])
+end
+
+function abbreinder.remove_autocmds()
+
+    vim.cmd([[
+    command! -bang AbbreinderDisable autocmd! Abbreinder
+    ]])
+end
+
+function abbreinder.disable()
+    -- setting this makes `nvim_buf_attach` return true,
+    -- detaching from buffer and clearing keylogger
+    -- @see abbreinder.start
+    abbreinder._should_stop = true
+end
+
+function abbreinder.enable()
+    abbreinder._should_stop = false
+    create_ex_commands()
+    abbreinder.create_autocmds()
 end
 
 
@@ -172,9 +220,7 @@ function abbreinder.setup(user_config)
     user_config = user_config or {}
 
     abbreinder.config = vim.tbl_extend('force', default_config, user_config)
-
-    create_commands()
-    abbreinder.create_autocmds()
+    abbreinder.enable()
 end
 
 return abbreinder

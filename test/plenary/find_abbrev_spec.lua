@@ -16,8 +16,7 @@ describe('find_abbrev', function()
 
         -- matchstrpos just happens to be a method used in find_abbrev
         local spied_matchstrpos = spy.on(vim.fn, 'matchstrpos')
-        vim.v.char = keyword
-        local remembered = abbreinder.find_abbrev()
+        local remembered = abbreinder.find_abbrev(keyword)
         assert.are.same(-1, remembered)
 
         assert.spy(spied_matchstrpos).was_not_called()
@@ -31,8 +30,7 @@ describe('find_abbrev', function()
             helpers.create_abbr({}, abbr.trigger, abbr.value)
 
             abbreinder._keylogger = 'random text ' .. abbr.value
-            vim.v.char = non_keyword
-            local _, actual_trigger, actual_value = abbreinder.find_abbrev()
+            local _, actual_trigger, actual_value = abbreinder.find_abbrev(non_keyword)
 
             assert.are.same(abbr.trigger, actual_trigger)
             assert.are.same(abbr.value, actual_value)
@@ -49,8 +47,7 @@ describe('find_abbrev', function()
             helpers.create_abbr({}, abbr.trigger, abbr.value)
 
             abbreinder._keylogger = abbreinder._keylogger .. ' random text ' .. abbr.value
-            vim.v.char = non_keyword
-            local _, actual_trigger, actual_value = abbreinder.find_abbrev()
+            local _, actual_trigger, actual_value = abbreinder.find_abbrev(non_keyword)
 
             assert.are.same(abbr.trigger, actual_trigger, i .. 'th abbrev')
             assert.are.same(abbr.value, actual_value)
