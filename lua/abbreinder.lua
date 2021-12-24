@@ -43,10 +43,17 @@ function abbreinder._get_abbrevs_val_trigger()
             val = val:gsub('^'..prefix, '')
         end
 
-        local multiword_expansion = val:find(' ') ~= nil
-        if (multiword_expansion) then
-            local last_word = val:match('(%S+)$')
-            abbrev_map_multiword[last_word] = val
+        -- support for values which contain keywords
+        local val_contains_non_keyword_reg = vim.regex('[^[:keyword:]]')
+        local val_contains_non_keyword = val_contains_non_keyword_reg:match_str(val)
+        if (val_contains_non_keyword) then
+
+            local val_after_non_keyword_reg = vim.regex('[[:keyword:]]\\+$')
+            local val_after_nk_start, val_after_nk_end = val_after_non_keyword_reg:match_str(val)
+            val_after_nk_start = val_after_nk_start + 1
+
+            local val_after_nk = val:sub(val_after_nk_start, val_after_nk_end)
+            abbrev_map_multiword[val_after_nk] = val
         end
 
         abbrev_map_value_trigger[val] = trigger
@@ -110,7 +117,7 @@ function abbreinder.find_abbrev(cur_char)
     local text_to_search = abbreinder._keylogger
 
     -- value + trigger char
-    local value_regex = vim.regex('[[:keyword:]]\\+[^[:keyword:]]$')
+    local value_regex = vim.regex('[[:keyword:]]\\+[^[:keyword:]]\\+$')
     local val_start,val_end = value_regex:match_str(text_to_search)
     if val_start == nil then
         return -1
