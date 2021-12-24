@@ -32,6 +32,17 @@ describe('get_abbrevs_val_trigger works correctly if', function()
         assert.are.same(multi_trigger, abbrev_map_value_trigger[actual_multi_val])
     end)
 
+    it("adds abbreviations with special characters to list", function()
+
+        local trigger = 'wts'
+        local value = "what's"
+
+        abbrs = helpers.create_abbr(abbrs, trigger, value)
+        local abbrev_map_value_trigger = abbreinder._get_abbrevs_val_trigger()
+
+        assert.are.same(trigger, abbrev_map_value_trigger[value])
+    end)
+
     it('adds newly defined abbreviations to the list', function()
 
         abbrs = helpers.create_abbr(abbrs, 'hi', 'hello')

@@ -23,6 +23,75 @@ describe('find_abbrev', function()
         vim.fn.matchstrpos:revert()
     end)
 
+    it('short circuits if abbreviation not possible', function()
+
+        -- matchstrpos just happens to be a method used in find_abbrev
+        local spied_matchstrpos = spy.on(vim.fn, 'matchstrpos')
+        local remembered = abbreinder.find_abbrev(keyword)
+        assert.are.same(-1, remembered)
+
+        assert.spy(spied_matchstrpos).was_not_called()
+        vim.fn.matchstrpos:revert()
+    end)
+
+    -- the next three tests handle abbreviations formatted
+    -- as specifed in `:h abbreviations`
+    it('finds full-id (all keywords) abbreviations', function()
+
+        local trigger = 'foo'
+        local value = "foobar"
+
+        helpers.create_abbr({}, trigger, value)
+
+        abbreinder._keylogger = 'random text ' .. value
+        local _, actual_trigger, actual_value = abbreinder.find_abbrev(non_keyword)
+
+        assert.are.same(trigger, actual_trigger)
+        assert.are.same(value, actual_value)
+    end)
+
+    it('finds end-id (ends in keyword, no restriction on anything else) abbreviations', function()
+
+        local trigger = '#i'
+        local value = "import"
+
+        helpers.create_abbr({}, trigger, value)
+
+        abbreinder._keylogger = 'random text ' .. value
+        local _, actual_trigger, actual_value = abbreinder.find_abbrev(non_keyword)
+
+        assert.are.same(trigger, actual_trigger)
+        assert.are.same(value, actual_value)
+    end)
+
+    it('finds non-id (anything, but ends in non-keyword) abbreviations', function()
+
+        local trigger = 'def#'
+        local value = "hi"
+
+        helpers.create_abbr({}, trigger, value)
+
+        abbreinder._keylogger = 'random text ' .. value
+        local _, actual_trigger, actual_value = abbreinder.find_abbrev(non_keyword)
+
+        assert.are.same(trigger, actual_trigger)
+        assert.are.same(value, actual_value)
+    end)
+
+    it('finds abbrev where value has keyword characters in it', function()
+
+        local trigger = 'wt'
+        local value = "what's"
+
+        helpers.create_abbr({}, trigger, value)
+
+        abbreinder._keylogger = 'random text ' .. value
+        local _, actual_trigger, actual_value = abbreinder.find_abbrev(non_keyword)
+
+        assert.are.same(trigger, actual_trigger)
+        assert.are.same(value, actual_value)
+    end)
+
     helpers.run_multi_category_tests(function(category, abbr)
 
         it('accounts for '..category..' word abbrs', function()
