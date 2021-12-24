@@ -3,38 +3,19 @@ local util = require "plenary.async.util"
 
 -- @Summary write `text` to current buffer, triggering all regular
 -- insert functionality (including autocmds and abbrev expansion)
--- @param trigger - bool. default, false
--- @param buf - buffer to run command in. default, create and switch to new buffer
 -- side effect: switches to buffer `buf`
 -- @return text actually typed (accounting for trigger), and buffer it was typed in
-local function type_text(text, trigger, buf)
+local function type_text(text_to_type)
 
-    local text_typed = text
+    -- if call `feedkeys` on entire string, attach_buffer (@see abbreinder.start)
+    -- doesn't get all of the characters
+    -- I believe this is due to `:help feedkeys()`
+    --  > The function does not wait for processing of keys contained in {string}
+    text_to_type:gsub(".", function(char)
+        vim.api.nvim_feedkeys('a' .. char, 'xt', false)
+    end)
 
-    if (trigger) then text_typed = text_typed .. ' ' end
-    if (not buf) then buf = vim.api.nvim_create_buf(false, true) end
-
-    -- tried using `nvim_buf_call`, but then `nvim_get_current_line` was always empty
-    vim.api.nvim_command('buffer ' .. buf)
-
-    local pos = {}
-    pos.before = vim.fn.getcurpos()
-
-    -- -1 because functions like nvim_buf_add_highlight are zero indexed but pos is 1-indexed
-    pos.before.line = pos.before[2] - 1
-    pos.before.col = pos.before[3] - 1
-
-    -- prob don't need <Esc>. revisit
-    local keycodes = vim.api.nvim_replace_termcodes('a' .. text_typed .. '<Esc>', true, true, true)
-    vim.api.nvim_feedkeys(keycodes, 'x', false)
-
-    pos.after = vim.fn.getcurpos()
-    pos.after.line = pos.after[2] - 1
-    pos.after.col = pos.after[3] - 1
-
-    local line = vim.api.nvim_buf_get_lines(buf, pos.before.line, pos.after.line + 1, false)
-    pending('Line->'..line[1]..'<-')
-    return text_typed, pos, buf
+    return text_to_type
 end
 
 local abbr_examples = {

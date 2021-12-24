@@ -1,80 +1,93 @@
 
 
 local assert = require('luassert.assert')
-local helpers = require'test.plenary.helpers'
-local abbreinder = require'abbreinder'
-
-local mock = require('luassert.mock')
 local spy = require('luassert.spy')
-local match = require("luassert.match")
+local helpers = require('test.plenary.helpers')
 
-local ui = require'abbreinder.ui'
-local api = vim.api;
--- local util = require "plenary.async.util"
--- local async_tests = require "plenary.async.tests"
+local abbreinder = require('abbreinder')
+local ui = require('abbreinder.ui')
 
---[[
-describe('Integration tests', function()
 
-    local function test_highlight(abbr, buf)
+describe('integration tests', function()
 
-        local text = abbr.value
+    local keyword, non_keyword = helpers.set_keyword()
+    abbreinder.start()
 
-        helpers.create_abbreviation(abbr)
+    local spied_check_remembered;
+    local spied_find;
+    local spied_output_reminder;
 
-        local spied = spy.on(api, 'nvim_buf_add_highlight')
+    before_each(function()
+        -- technically because integration testing, don't need to
+        -- check anything except output_reminder. but helps for
+        -- debugging tests
+        spied_check_remembered = spy.on(abbreinder, '_check_abbrev_remembered')
+        spied_find = spy.on(abbreinder, 'find_abbrev')
+        spied_output_reminder = spy.on(ui, 'output_reminder')
+    end)
 
-        local text_typed, pos = helpers.type_text(text, true, buf)
+    after_each(function()
+        abbreinder._check_abbrev_remembered:revert()
+        abbreinder.find_abbrev:revert()
+        ui.output_reminder:revert()
+    end)
 
-        local _ = match._
+    helpers.run_multi_category_tests(function(category, abbr)
 
-        assert.spy(api.nvim_buf_add_highlight).was_called()
-        pending('l: '.. pos.before.line .. ' c: '.. pos.before.col .. ' len: '.. pos.after.col)
-        -- 6
-        assert.spy(api.nvim_buf_add_highlight).was_called_with(_, _, _, pos.before.line, pos.before.col, pos.after.col)
+        it('reminds the user of '..category..' abbrevations', function()
 
-        local line = vim.api.nvim_get_current_line()
-        assert.equals(text_typed, line)
-    end
+            helpers.create_abbr({}, abbr.trigger, abbr.value)
+            helpers.type_text(abbr.value .. non_keyword)
 
-    -- it('highlights single word abbrs at start of line', function()
-    --
-    --     local abbr = helpers.abbrs.single_word.generic[0]
-    --     test_highlight(abbr)
-    -- end)
+            assert.spy(spied_find, 'find_abbrev').was_called()
+            assert.spy(spied_check_remembered, 'remembered').was_called()
+            assert.spy(spied_output_reminder, 'reminder').was_called()
+        end)
+    end)
 
-    -- it('highlights single word abbrs in middle of line', function()
-    --
-    --     local abbr = helpers.abbrs.single_word.generic[0]
-    --
-    --     local text = abbr.value
-    --
-    --     helpers.create_abbreviation(abbr)
-    --
-    --     local text_typed, pos, buf = helpers.type_text('random text ' .. abbr.value, true)
-    --
-    --     local spied = spy.on(api, 'nvim_buf_add_highlight')
-    --
-    --     -- text_typed, pos = helpers.type_text(text, true, buf)
-    --
-    --     local _ = match._
-    --
-    --     assert.spy(api.nvim_buf_add_highlight).was_called()
-    --     pending('HERE l: '.. pos.before.line .. ' c: '.. pos.before.col .. ' len: '.. pos.after.col)
-    --     -- 6
-    --     assert.spy(api.nvim_buf_add_highlight).was_called_with(_, _, _, pos.before.line, pos.before.col, pos.after.col)
-    --
-    --     -- expected: 11 to 18
-    --     -- actual:   12 to 18
-    --     local line = vim.api.nvim_get_current_line()
-    --     assert.equals(text_typed, line)
-    -- end)
+    it('does not remind the user of expanded abbrevations', function()
 
-    -- it('highlights multi word abbrs at start of line', function()
-    --
-    --     local abbr = helpers.abbrs.multi_word.generic[0]
-    --     test_highlight(abbr)
-    -- end)
+        local abbr = helpers.abbrs.generic[1]
+
+        helpers.create_abbr({}, abbr.trigger, abbr.value)
+        helpers.type_text(abbr.trigger .. non_keyword)
+
+        assert.spy(spied_find, 'find_abbrev').was_called()
+        assert.spy(spied_check_remembered, 'remembered').was_not_called()
+        assert.spy(spied_output_reminder, 'reminder').was_not_called()
+    end)
+
+    it('does not remind user of non-existent abbreviations', function()
+
+        local abbr = {trigger = 'nonexistant', value = 'silence is golden'}
+
+        -- not defining abbreviation
+
+        helpers.type_text(abbr.trigger .. non_keyword)
+
+        assert.spy(spied_find, 'find_abbrev').was_called()
+        assert.spy(spied_check_remembered, 'remembered').was_not_called()
+        assert.spy(spied_output_reminder, 'reminder').was_not_called()
+    end)
+
+    it('takes into account backspacing', function()
+
+        local abbr = {trigger = 'hello', value = 'goodbye'}
+
+        helpers.create_abbr({}, abbr.trigger, abbr.value)
+
+        -- since in helpers.type_text looping through chars
+        -- can't input special chars unless do more logic
+        -- but not worth writing for one test
+        local bs = vim.api.nvim_replace_termcodes('<BS>', true, true, true)
+
+        helpers.type_text('good')
+        vim.api.nvim_feedkeys('a' .. bs, 'xt', false)
+        helpers.type_text('dbye' .. non_keyword)
+
+        assert.spy(spied_find, 'find_abbrev').was_called()
+        assert.spy(spied_check_remembered, 'remembered').was_called()
+        assert.spy(spied_output_reminder, 'reminder').was_called()
+    end)
 
 end)
---]]
