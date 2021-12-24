@@ -1,7 +1,7 @@
 local assert = require('luassert.assert')
 local stub = require('luassert.stub')
-local ui = require'abbreinder.ui'
 
+local ui = require('abbreinder.ui')
 
 
 local function get_coordinates_helper(value, beginning_text, end_text)
@@ -71,6 +71,7 @@ local function run_tests(test_case, value)
 
 end
 
+-- not using iskeyword here, because keywords don't matter
 local cases = {['single'] = 'value', ['multi'] = 'point of view'}
 describe('get_coordinates works correctly if', function()
 

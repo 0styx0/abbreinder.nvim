@@ -6,8 +6,8 @@ local helpers = require('test.plenary.helpers')
 
 describe('check_abbrev_remembered', function()
 
-    local trigger = 'trigger'
-    local value = 'my value'
+    local trigger = helpers.abbrs.generic[1].trigger
+    local value = helpers.abbrs.generic[1].value
 
     -- removed at eof. plenary doesn't support teardown()
     local keyword, non_keyword = helpers.set_keyword()

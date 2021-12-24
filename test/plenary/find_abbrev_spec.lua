@@ -92,7 +92,7 @@ describe('find_abbrev', function()
         assert.are.same(value, actual_value)
     end)
 
-    helpers.run_multi_category_tests(function(category, abbr)
+    helpers.run_multi_category_tests(non_keyword, function(category, abbr)
 
         it('accounts for '..category..' word abbrs', function()
 

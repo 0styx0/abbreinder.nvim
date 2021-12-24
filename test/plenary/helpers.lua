@@ -1,10 +1,6 @@
-local util = require "plenary.async.util"
--- local a = require "plenary.async.async"
 
 -- @Summary write `text` to current buffer, triggering all regular
 -- insert functionality (including autocmds and abbrev expansion)
--- side effect: switches to buffer `buf`
--- @return text actually typed (accounting for trigger), and buffer it was typed in
 local function type_text(text_to_type)
 
     -- if call `feedkeys` on entire string, attach_buffer (@see abbreinder.start)
@@ -14,8 +10,6 @@ local function type_text(text_to_type)
     text_to_type:gsub(".", function(char)
         vim.api.nvim_feedkeys('a' .. char, 'xt', false)
     end)
-
-    return text_to_type
 end
 
 local abbr_examples = {
@@ -27,6 +21,10 @@ local abbr_examples = {
             [2] = {
                 trigger = 'shep',
                 value = 'shepherd'
+            },
+            [3] = {
+                trigger = 'hi',
+                value = 'hello'
             }
     },
     single_word = {
@@ -49,7 +47,9 @@ local abbr_examples = {
             }
         }
     },
-    multi_word = {
+    -- note: technically space might not be keyword
+    -- be sure to `value:gsub(' ', non_keyword_char)` when used
+    containing_non_keyword = {
         generic = {
             [1] = {
                 trigger = 'api',
@@ -114,13 +114,15 @@ end
 -- @Summary runs test on multiple abbr categories (eg, value is single or multi word)
 -- @param testFn - function(category: string, abbr)
 --   and abbr will be {trigger: string, value: string}
-local function run_multi_category_tests(testFn)
-    -- note: maybe create_abbr here and remove after
-    -- problem: might interfere if previously defined and now removing
-    -- fix: track if previously defined
-    -- todo: by refactor
+local function run_multi_category_tests(non_keyword, testFn)
+
     testFn('single', abbr_examples.single_word.generic[1])
-    testFn('multi', abbr_examples.multi_word.generic[1])
+
+    local contains_non_key = abbr_examples.containing_non_keyword.generic[1]
+    local contains_nk_val = contains_non_key.value:gsub(' ', non_keyword)
+    local nk_abbr = {trigger = contains_non_key.trigger, value = contains_nk_val}
+
+    testFn('containing non_keyword chars', nk_abbr)
 end
 
 return {

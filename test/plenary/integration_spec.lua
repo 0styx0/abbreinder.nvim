@@ -1,5 +1,3 @@
-
-
 local assert = require('luassert.assert')
 local spy = require('luassert.spy')
 local helpers = require('test.plenary.helpers')
@@ -32,7 +30,7 @@ describe('integration tests', function()
         ui.output_reminder:revert()
     end)
 
-    helpers.run_multi_category_tests(function(category, abbr)
+    helpers.run_multi_category_tests(non_keyword, function(category, abbr)
 
         it('reminds the user of '..category..' abbrevations', function()
 
@@ -89,5 +87,6 @@ describe('integration tests', function()
         assert.spy(spied_check_remembered, 'remembered').was_called()
         assert.spy(spied_output_reminder, 'reminder').was_called()
     end)
-
 end)
+
+helpers.reset()
