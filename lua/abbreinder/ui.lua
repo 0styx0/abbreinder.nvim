@@ -65,13 +65,16 @@ end
 local function highlight_unexpanded_abbr(abbreinder, value)
 
     local line_num, abbr_start, abbr_len = ui.get_coordinates(value)
+    local buf = api.nvim_get_current_buf()
 
-    local ns = api.nvim_buf_add_highlight(0, -1, abbreinder.config.output.msg.highlight,
+    local ns = api.nvim_create_namespace('abbreinder'..value..'l'..line_num..'s'..abbr_start)
+    -- -1 because lua is one-indexed, vim.api is zero-indexed
+    api.nvim_buf_add_highlight(buf, ns, abbreinder.config.output.msg.highlight,
         line_num - 1, abbr_start,  abbr_len)
 
     if abbreinder.config.output.msg.highlight_time ~= -1 then
         vim.defer_fn(function()
-            api.nvim_buf_clear_namespace(0, ns, line_num, line_num + 1)
+            api.nvim_buf_clear_namespace(buf, ns, line_num - 1, line_num)
         end, abbreinder.config.output.msg.highlight_time)
     end
 end
