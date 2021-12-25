@@ -1,4 +1,3 @@
-local api = vim.api
 
 local default_config = require('abbreinder.config')
 local ui = require('abbreinder.ui')
@@ -71,7 +70,7 @@ end
 -- @return two maps - {trigger, value} and for multiword abbrevs, {last_word_of_value, full_value}
 function abbreinder._get_abbrevs_val_trigger()
 
-    local abbrevs = api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
+    local abbrevs = vim.api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
 
     if (abbreinder._cache.abbrevs == abbrevs) then
 
