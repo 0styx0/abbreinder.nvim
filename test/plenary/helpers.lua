@@ -1,4 +1,7 @@
 
+-- imports for use in tests
+require('test.plenary.custom_assertions')
+
 -- @Summary write `text` to current buffer, triggering all regular
 -- insert functionality (including autocmds and abbrev expansion)
 local function type_text(text_to_type)
@@ -55,8 +58,14 @@ local abbr_examples = {
                 trigger = 'api',
                 value = 'application programming interface'
             }
+        },
+        single_char = {
+            [1] = {
+                trigger = 'un',
+                value = '∪'
+            }
         }
-    }
+    },
 }
 
 -- @param abbr = { trigger, value }
@@ -124,6 +133,7 @@ local function run_multi_category_tests(non_keyword, testFn)
 
     testFn('containing non_keyword chars', nk_abbr)
 end
+
 
 return {
     type_text = type_text,

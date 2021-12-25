@@ -3,16 +3,68 @@ local api = vim.api
 local default_config = require('abbreinder.config')
 local ui = require('abbreinder.ui')
 
+-- note: nk = non-keyword (which can expand abbrevations. but can also be part of abbreviation values)
 local abbreinder = {
     _cache = {
         abbrevs = '',
         abbrev_map_value_trigger = {},
-        multiword_abbrev_map = {},
+        -- multiword map only uses last word of multiword values for the key
+        -- if that word is found, check full list for key/value
+        abbrev_map_multiword = {},
     },
     _keylogger = '',
     _should_stop = false,
 }
 
+-- @param trigger, value - of an abbreviation whose value contains a non-keyword char
+-- @return updated abbreinder._cache.abbrev_map_multiword
+local function add_nk_containing_abbr(map_nk_val, value)
+
+    local val_after_non_keyword_reg = vim.regex('[[:keyword:]]\\+$')
+    local val_after_nk_start, val_after_nk_end = val_after_non_keyword_reg:match_str(value)
+
+    local val_is_only_one_char_and_is_nk_keyword = not val_after_nk_start
+    if val_is_only_one_char_and_is_nk_keyword then
+
+        if not map_nk_val[''] then
+            map_nk_val[''] = {}
+        end
+        table.insert(map_nk_val[''], value)
+        return map_nk_val
+    end
+
+    val_after_nk_start = val_after_nk_start + 1
+
+    local val_after_nk = value:sub(val_after_nk_start, val_after_nk_end)
+
+    if (not map_nk_val[val_after_nk]) then
+        map_nk_val[val_after_nk] = {}
+    end
+
+    table.insert(map_nk_val[val_after_nk], value)
+
+    return map_nk_val
+end
+
+-- @return value if val_after_nk points to value of an abbreviation, else false
+function abbreinder._contains_nk_abbr(text, val_after_nk)
+
+    if not abbreinder._cache.abbrev_map_multiword[val_after_nk] then
+        return false
+    end
+
+    local potential_values = abbreinder._cache.abbrev_map_multiword[val_after_nk]
+
+    for _,value in ipairs(potential_values) do
+        if abbreinder._cache.abbrev_map_value_trigger[value] and
+            string.find(text, value, #text - #value, true)
+        then
+            return value
+        end
+    end
+
+    return false
+end
 
 -- @Summary Parses neovim's list of abbrevations into a map
 -- Caches results, so only runs if new iabbrevs are added during session
@@ -31,38 +83,30 @@ function abbreinder._get_abbrevs_val_trigger()
     -- using {last_word_of_value, full_value} instead of {trigger, value} because
     -- the user types the value, not the trigger
     local abbrev_map_value_trigger = {}
+    local map_nk_val = {}
 
-    -- multiword map only uses last word of multiword values for the key
-    -- if that word is found, check full list for key/value
-    local abbrev_map_multiword = {}
-
-    for trigger, val in abbrevs:gmatch("i%s%s(.-)%s%s*(.-)\n") do
+    for trigger, value in abbrevs:gmatch("i%s%s(.-)%s%s*(.-)\n") do
 
         -- support for plugins such as vim-abolish, which adds prefix
         for _, prefix in ipairs(abbreinder.config.value_prefixes) do
-            val = val:gsub('^'..prefix, '')
+            value = value:gsub('^'..prefix, '')
         end
 
         -- support for values which contain keywords
-        local val_contains_non_keyword_reg = vim.regex('[^[:keyword:]]')
-        local val_contains_non_keyword = val_contains_non_keyword_reg:match_str(val)
-        if (val_contains_non_keyword) then
-
-            local val_after_non_keyword_reg = vim.regex('[[:keyword:]]\\+$')
-            local val_after_nk_start, val_after_nk_end = val_after_non_keyword_reg:match_str(val)
-            val_after_nk_start = val_after_nk_start + 1
-
-            local val_after_nk = val:sub(val_after_nk_start, val_after_nk_end)
-            abbrev_map_multiword[val_after_nk] = val
+        local value_contains_non_keyword_reg = vim.regex('[^[:keyword:]]')
+        local value_contains_non_keyword = value_contains_non_keyword_reg:match_str(value)
+        if (value_contains_non_keyword) then
+            map_nk_val = add_nk_containing_abbr(map_nk_val, value)
         end
 
-        abbrev_map_value_trigger[val] = trigger
+        abbrev_map_value_trigger[value] = trigger
     end
 
     abbreinder._cache.abbrev_map_value_trigger = abbrev_map_value_trigger
-    abbreinder._cache.abbrev_map_multiword = abbrev_map_multiword
+    abbreinder._cache.abbrev_map_multiword = map_nk_val
 
-    return abbrev_map_value_trigger, abbrev_map_multiword
+    -- map_multi updated @see by add_nk_containing_abbr
+    return abbrev_map_value_trigger, abbreinder._cache.abbrev_map_multiword
 end
 
 
@@ -128,15 +172,15 @@ function abbreinder.find_abbrev(cur_char)
     -- match_str doesn't support capture groups
     local potential_value = text_to_search:sub(val_start, val_end)
 
-    local value_trigger, multiword_map = abbreinder._get_abbrevs_val_trigger()
+    local value_trigger = abbreinder._get_abbrevs_val_trigger()
     local potential_trigger = value_trigger[potential_value]
 
-    local potential_multiword_abbrev = multiword_map[potential_value] ~= nil
-    if (potential_multiword_abbrev) then
-        local multi_value = multiword_map[potential_value]
-        local multi_trigger = value_trigger[multi_value]
-        abbr_remembered = abbreinder._check_abbrev_remembered(multi_trigger, multi_value)
-        return abbr_remembered, multi_trigger, multi_value
+    -- potential_value would only be character after last non-keyword char
+    local nk_value = abbreinder._contains_nk_abbr(text_to_search, potential_value)
+    if (nk_value) then
+        local multi_trigger = value_trigger[nk_value]
+        abbr_remembered = abbreinder._check_abbrev_remembered(multi_trigger, nk_value)
+        return abbr_remembered, multi_trigger, nk_value
 
     elseif (potential_trigger) then
         abbr_remembered = abbreinder._check_abbrev_remembered(potential_trigger, potential_value)

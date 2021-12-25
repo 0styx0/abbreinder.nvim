@@ -22,17 +22,19 @@ describe('get_abbrevs_val_trigger works correctly if', function()
     end)
 
     -- technically a space might be a keyword. but _highly_ doubt that
-    it("can follow multiword abbreviations to the main abbreviation map", function()
+    it("can follow values containing non-keywords to the main abbreviation map", function()
 
         local multi_trigger = 'pov'
-        local multi_val = 'point of view'
+        local after_last_nk = 'view'
+        local multi_val = 'point of' .. non_keyword .. after_last_nk
 
         abbrs = helpers.create_abbr(abbrs, multi_trigger, multi_val)
-        local abbrev_map_value_trigger, abbrev_map_multiword = abbreinder._get_abbrevs_val_trigger()
-        local actual_multi_val = abbrev_map_multiword['view']
+        local abbrev_map_value_trigger = abbreinder._get_abbrevs_val_trigger()
 
-        assert.are.same(multi_val, actual_multi_val)
-        assert.are.same(multi_trigger, abbrev_map_value_trigger[actual_multi_val])
+        local nk_full_val = abbreinder._contains_nk_abbr(multi_val, after_last_nk)
+        assert.truthy(nk_full_val)
+        assert.are.same(multi_val, nk_full_val)
+        assert.are.same(multi_trigger, abbrev_map_value_trigger[nk_full_val])
     end)
 
     -- technically the same as multiword, but ensuring not just checking
@@ -88,6 +90,45 @@ describe('get_abbrevs_val_trigger works correctly if', function()
         abbrs = helpers.remove_abbr(abbrs, 'op', 'operation')
         abbrs = helpers.remove_abbr(abbrs, 'ops', 'operations')
         vim.cmd('Abolish -delete op{,s}')
+    end)
+
+
+    it('value consists of a single non-keyword char', function()
+
+        local abbr = helpers.abbrs.containing_non_keyword.single_char[1]
+
+        abbrs = helpers.create_abbr(abbrs, abbr.trigger, abbr.value)
+        local abbrev_map_value_trigger = abbreinder._get_abbrevs_val_trigger()
+
+        -- removing because if assertion fails, would break rest of tests
+        abbrs = helpers.remove_abbr(abbrs, abbr.trigger, abbr.value)
+
+        assert.are.same(abbr.trigger, abbrev_map_value_trigger[abbr.value])
+    end)
+
+    it('two non-keyword-containing values with same ending can coexist', function()
+
+        local after_last_nk = 'view'
+        local same_ending_abbrs = {
+            [1] = {
+                ['trigger'] = "pov",
+                ['value'] = "point of" .. non_keyword .. after_last_nk
+            },
+            [2] = {
+                ['trigger'] = "nv",
+                ['value'] = "nice" .. non_keyword .. after_last_nk
+            }
+        }
+
+        abbrs = helpers.create_abbr(abbrs, same_ending_abbrs[1].trigger, same_ending_abbrs[1].value)
+        abbrs = helpers.create_abbr(abbrs, same_ending_abbrs[2].trigger, same_ending_abbrs[2].value)
+        local abbrev_map_value_trigger = abbreinder._get_abbrevs_val_trigger()
+
+        assert.are.same(same_ending_abbrs[1].trigger, abbrev_map_value_trigger[same_ending_abbrs[1].value])
+        assert.are.same(same_ending_abbrs[2].trigger, abbrev_map_value_trigger[same_ending_abbrs[2].value])
+
+        assert.contains_element(abbreinder._cache.abbrev_map_multiword[after_last_nk], same_ending_abbrs[1].value)
+        assert.contains_element(abbreinder._cache.abbrev_map_multiword[after_last_nk], same_ending_abbrs[2].value)
     end)
 end)
 
