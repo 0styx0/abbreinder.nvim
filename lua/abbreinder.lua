@@ -202,6 +202,10 @@ function abbreinder.start()
                 return true
             end
 
+            if vim.fn.mode() ~= 'i' then
+                return false
+            end
+
             local line = vim.api.nvim_buf_get_lines(0, start_row, start_row + 1, true)[1]
             local cur_char = line:sub(start_col + 1, start_col + 1)
 
