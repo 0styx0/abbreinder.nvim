@@ -202,6 +202,8 @@ function abbreinder.start()
                 return true
             end
 
+            -- if don't have this, then the nvim_buf_get_lines will throw out of bounds error
+            -- even if not actually accessing an index of it, and start_row is a valid index
             if vim.fn.mode() ~= 'i' then
                 return false
             end

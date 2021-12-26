@@ -2,15 +2,46 @@
 -- imports for use in tests
 require('test.plenary.custom_assertions')
 
+-- @Summary vim deletes trigger on abbreviation expansion. this simulates it
+local function format_trigger_expanding(trigger)
+    return trigger .. string.rep('<BS>', #trigger)
+end
+
 -- @Summary write `text` to current buffer, triggering all regular
 -- insert functionality (including autocmds and abbrev expansion)
+-- @note: if < or > is in text_to_type, it _must_ be part of a special character
+--  eg, <CR>
 local function type_text(text_to_type)
 
     -- if call `feedkeys` on entire string, attach_buffer (@see abbreinder.start)
     -- doesn't get all of the characters
     -- I believe this is due to `:help feedkeys()`
     --  > The function does not wait for processing of keys contained in {string}
+    local special_char_accum = ''
+    local special_char_flag = false
+
     text_to_type:gsub(".", function(char)
+
+        if char == '>' then
+
+            special_char_accum = special_char_accum .. '>'
+            special_char_flag = false
+            local special_char = vim.api.nvim_replace_termcodes(special_char_accum, true, true, true)
+            vim.api.nvim_feedkeys('a' .. special_char, 'xt', false)
+            return
+        end
+
+        if special_char_flag then
+            special_char_accum = special_char_accum .. char
+            return
+        end
+
+        if char == '<' then
+            special_char_flag = true
+            special_char_accum = '<'
+            return
+        end
+
         vim.api.nvim_feedkeys('a' .. char, 'xt', false)
     end)
 end
@@ -143,5 +174,6 @@ return {
     remove_abbr = remove_abbr,
     set_keyword = set_keyword,
     reset = reset,
-    run_multi_category_tests = run_multi_category_tests
+    run_multi_category_tests = run_multi_category_tests,
+    format_trigger_expanding = format_trigger_expanding,
 }

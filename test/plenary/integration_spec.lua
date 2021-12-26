@@ -47,8 +47,10 @@ describe('integration tests', function()
 
         local abbr = helpers.abbrs.generic[1]
 
+        local expanding_trigger = helpers.format_trigger_expanding(abbr.trigger)
+
         helpers.create_abbr({}, abbr.trigger, abbr.value)
-        helpers.type_text(abbr.trigger .. non_keyword)
+        helpers.type_text(expanding_trigger .. non_keyword)
 
         assert.spy(spied_find, 'find_abbrev').was_called()
         assert.spy(spied_check_remembered, 'remembered').was_not_called()
@@ -68,24 +70,25 @@ describe('integration tests', function()
         assert.spy(spied_output_reminder, 'reminder').was_not_called()
     end)
 
-    it('takes into account backspacing', function()
+    it("reminds about forgotten abbr even if backspace in value", function()
 
         local abbr = {trigger = 'hello', value = 'goodbye'}
 
         helpers.create_abbr({}, abbr.trigger, abbr.value)
 
-        -- since in helpers.type_text looping through chars
-        -- can't input special chars unless do more logic
-        -- but not worth writing for one test
-        local bs = vim.api.nvim_replace_termcodes('<BS>', true, true, true)
-
-        helpers.type_text('good')
-        vim.api.nvim_feedkeys('a' .. bs, 'xt', false)
-        helpers.type_text('dbye' .. non_keyword)
+        helpers.type_text('good<BS>dbye' .. non_keyword)
 
         assert.spy(spied_find, 'find_abbrev').was_called()
         assert.spy(spied_check_remembered, 'remembered').was_called()
         assert.spy(spied_output_reminder, 'reminder').was_called()
+    end)
+
+    it('does nothing on a non-insert-mode command', function()
+
+        helpers.type_text('a<CR><Esc>dd')
+
+        assert.spy(spied_check_remembered, 'remembered').was_not_called()
+        assert.spy(spied_output_reminder, 'reminder').was_not_called()
     end)
 end)
 
