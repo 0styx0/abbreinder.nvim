@@ -13,7 +13,13 @@ local abbreinder = {
     },
     _keylogger = '',
     _should_stop = false,
+    _backspace_data = {
+        consecutive_backspaces = 0,
+        saved_keylogger = '',
+        potential_trigger = '',
+    }
 }
+
 
 -- @param trigger, value - of an abbreviation whose value contains a non-keyword char
 -- @return updated abbreinder._cache.abbrev_map_multiword
@@ -124,9 +130,13 @@ function abbreinder._check_abbrev_remembered(trigger, value)
     local expanded_reg = vim.regex(trigger .. '[^[:keyword:]]' .. value)
     local abbr_remembered = expanded_reg:match_str(abbreinder._keylogger)
 
-    if (abbr_remembered) then
+    if (abbr_remembered or abbreinder._backspace_data.potential_trigger == trigger) then
+
         vim.cmd [[doautocmd User AbbreinderAbbrExpanded]]
-        abbreinder._keylogger = ''
+        abbreinder.clear_keylogger()
+
+        abbreinder._backspace_data.potential_trigger = ''
+
         return 1
     end
 
@@ -136,7 +146,7 @@ function abbreinder._check_abbrev_remembered(trigger, value)
     if (abbr_forgotten) then
         ui.output_reminder(abbreinder, trigger, value)
         vim.cmd [[doautocmd User AbbreinderAbbrNotExpanded]]
-        abbreinder._keylogger = ''
+        abbreinder.clear_keylogger()
         return 0
     end
 
@@ -189,6 +199,37 @@ function abbreinder.find_abbrev(cur_char)
     return abbr_remembered
 end
 
+-- @Summary tracks backspacing. more complex than logic might initially seem
+--   because on abbreviation expansion, vim backspaces the trigger.
+--   so must differentiate between user vs expansion backspacing
+local function handle_backspacing(backspace_typed)
+
+    if backspace_typed then
+
+        if abbreinder._backspace_data.consecutive_backspaces == 0 then
+            abbreinder._backspace_data.saved_keylogger = abbreinder._keylogger
+            abbreinder._backspace_data.potential_trigger = ''
+        end
+
+        abbreinder._keylogger = abbreinder._keylogger:sub(1, -2)
+        abbreinder._backspace_data.consecutive_backspaces = abbreinder._backspace_data.consecutive_backspaces + 1
+        return
+    end
+
+    if abbreinder._backspace_data.consecutive_backspaces == 0 then
+        return
+    end
+
+    -- when abbr expanded, it deletes the trigger
+    -- so later in @see check_abbrev_remembered, compare with actual trigger
+    abbreinder._backspace_data.potential_trigger = string.sub(
+        abbreinder._backspace_data.saved_keylogger,
+        #abbreinder._backspace_data.saved_keylogger - abbreinder._backspace_data.consecutive_backspaces + 1
+    )
+
+    abbreinder._backspace_data.consecutive_backspaces = 0
+    abbreinder._backspace_data.saved_keylogger = ''
+end
 
 function abbreinder.start()
 
@@ -209,23 +250,29 @@ function abbreinder.start()
             end
 
             local line = vim.api.nvim_buf_get_lines(0, start_row, start_row + 1, true)[1]
+
             local cur_char = line:sub(start_col + 1, start_col + 1)
 
-            local user_backspaced = new_end_col == old_end_col - 1 and
+
+            local user_backspaced = cur_char == '' and new_end_col == old_end_col - 1 and
                 new_end_row == old_end_row and new_length == 0
+
             if user_backspaced then
-                abbreinder._keylogger = abbreinder._keylogger:sub(1, -2)
+                handle_backspacing(true)
             else
                 abbreinder.find_abbrev(cur_char)
+                handle_backspacing(false)
             end
-        end
+        end,
     })
 end
+
 
 function abbreinder.clear_keylogger()
     -- doing this on bufread fixes bug where characters C> are part of keylogger string
     abbreinder._keylogger = ''
 end
+
 
 local function create_ex_commands()
 
@@ -247,6 +294,7 @@ function abbreinder.create_autocmds()
     ]])
 end
 
+
 function abbreinder.remove_autocmds()
 
     vim.cmd([[
@@ -254,12 +302,14 @@ function abbreinder.remove_autocmds()
     ]])
 end
 
+
 function abbreinder.disable()
     -- setting this makes `nvim_buf_attach` return true,
     -- detaching from buffer and clearing keylogger
     -- @see abbreinder.start
     abbreinder._should_stop = true
 end
+
 
 function abbreinder.enable()
     abbreinder._should_stop = false
