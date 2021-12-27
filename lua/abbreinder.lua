@@ -59,7 +59,7 @@ function abbreinder._create_abbrev_maps()
 
     local abbrevs = vim.api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
 
-    if (abbreinder._cache.abbrevs == abbrevs) then
+    if abbreinder._cache.abbrevs == abbrevs then
 
         return abbreinder._cache.value_to_trigger,
             abbreinder._cache.last_chunk_to_full_values
@@ -193,7 +193,7 @@ function abbreinder._find_abbrev(cur_char)
 
     local keyword_regex = vim.regex('[[:keyword:]]')
     local not_trigger_char = keyword_regex:match_str(cur_char)
-    if (not_trigger_char) then
+    if not_trigger_char then
         return -1
     end
 
@@ -212,12 +212,12 @@ function abbreinder._find_abbrev(cur_char)
 
     -- potential_value only contains characters after last non-keyword char
     local nk_value = abbreinder._contains_nk_abbr(abbreinder._keylogger, potential_value)
-    if (nk_value) then
+    if nk_value then
         local nk_trigger = value_to_trigger[nk_value]
         abbreinder._check_abbrev_remembered(nk_trigger, nk_value)
         return nk_trigger, nk_value
 
-    elseif (potential_trigger) then
+    elseif potential_trigger then
         abbreinder._check_abbrev_remembered(potential_trigger, potential_value)
         return potential_trigger, potential_value
     end

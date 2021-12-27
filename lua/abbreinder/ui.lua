@@ -93,7 +93,7 @@ function ui.output_reminder(abbreinder, trigger, value)
         end, 0)
     end
 
-    if (abbreinder.config.output.as.echo) then
+    if abbreinder.config.output.as.echo then
         api.nvim_echo({{msg}}, {false}, {})
     end
 
