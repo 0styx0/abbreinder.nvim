@@ -2,7 +2,6 @@
 + [Usecase](#usecase)
 + [Installation](#installation)
 + [Commands](#commands)
-+ [Exports](#exports)
 
 Note: This plugin is now in "beta". I'm adding nice to have features before release (at which point the plugin will be at a point where it should always be stable to use). If you happen to stumble upon this and find a bug, please raise an issue letting me know.
 
@@ -73,8 +72,5 @@ While the config here will most likely be kept up to date, feel free to check ou
 ---
 
 ### Exports
-+ Two autocmds are exported:
-  + `AbbreinderAbbrExpanded`, called when an abbreviations is expanded (ie, used correctly)
-  + `AbbreinderAbbrNotExpanded`, called when an abbreviation is _not_ expanded (ie, abbreviation functionality was not used)
-
+Todo: Create subscription function ([#11](https://github.com/0styx0/abbreinder.nvim/issues/11#issue-1088460034))
 
