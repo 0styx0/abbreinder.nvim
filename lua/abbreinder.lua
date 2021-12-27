@@ -1,4 +1,3 @@
-
 local default_config = require('abbreinder.config')
 local ui = require('abbreinder.ui')
 
@@ -24,19 +23,18 @@ local abbreinder = {
     _should_stop = false,
 }
 
-
 -- @param value - containing at least one non-keyword character
 -- @return updated last_chunk_to_full_values
 local function add_nk_containing_abbr(map_nk_val, value)
-
     local val_after_non_keyword_pat = vim.regex('[[:keyword:]]\\+$')
     local val_after_nk_start, val_after_nk_end = val_after_non_keyword_pat:match_str(value)
 
     local val_is_only_one_char_and_is_nk_keyword = not val_after_nk_start
     if val_is_only_one_char_and_is_nk_keyword then
-
         -- must be {} because last chunk could be common
-        if not map_nk_val[''] then map_nk_val[''] = {} end
+        if not map_nk_val[''] then
+            map_nk_val[''] = {}
+        end
         table.insert(map_nk_val[''], value)
 
         return map_nk_val
@@ -46,7 +44,9 @@ local function add_nk_containing_abbr(map_nk_val, value)
 
     local val_after_nk = value:sub(val_after_nk_start, val_after_nk_end)
 
-    if not map_nk_val[val_after_nk] then map_nk_val[val_after_nk] = {} end
+    if not map_nk_val[val_after_nk] then
+        map_nk_val[val_after_nk] = {}
+    end
     table.insert(map_nk_val[val_after_nk], value)
 
     return map_nk_val
@@ -56,13 +56,10 @@ end
 -- Caches results, so only runs if new iabbrevs are added during session
 -- @return {[trigger] = value} and {[last_word_of_value_containing_keyword] = {full_values}}
 function abbreinder._create_abbrev_maps()
-
     local abbrevs = vim.api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
 
     if abbreinder._cache.abbrevs == abbrevs then
-
-        return abbreinder._cache.value_to_trigger,
-            abbreinder._cache.last_chunk_to_full_values
+        return abbreinder._cache.value_to_trigger, abbreinder._cache.last_chunk_to_full_values
     end
     abbreinder._cache.abbrevs = abbrevs
 
@@ -70,10 +67,9 @@ function abbreinder._create_abbrev_maps()
     local cur_lchunk_to_vals = {}
 
     for trigger, value in abbrevs:gmatch('i%s%s(.-)%s%s*(.-)\n') do
-
         -- support for plugins such as vim-abolish, which adds prefix
         for _, prefix in ipairs(abbreinder.config.value_prefixes) do
-            value = value:gsub('^'..prefix, '')
+            value = value:gsub('^' .. prefix, '')
         end
 
         local value_contains_non_keyword_pat = vim.regex('[^[:keyword:]]')
@@ -100,9 +96,7 @@ end
 --   because on abbreviation expansion, vim backspaces the trigger.
 --   so must differentiate between user vs expansion backspacing
 local function handle_backspacing(backspace_typed)
-
     if backspace_typed then
-
         if abbreinder._backspace_data.consecutive_backspaces == 0 then
             abbreinder._backspace_data.saved_keylogger = abbreinder._keylogger
             abbreinder._backspace_data.potential_trigger = ''
@@ -129,13 +123,24 @@ local function handle_backspacing(backspace_typed)
 end
 
 function abbreinder.start()
-
     vim.api.nvim_buf_attach(0, false, {
 
         on_detach = abbreinder.clear_keylogger,
 
-        on_bytes = function(byte_str, buf, changed_tick, start_row, start_col, byte_offset, old_end_row, old_end_col, old_length, new_end_row, new_end_col, new_length)
-
+        on_bytes = function(
+            byte_str,
+            buf,
+            changed_tick,
+            start_row,
+            start_col,
+            byte_offset,
+            old_end_row,
+            old_end_col,
+            old_length,
+            new_end_row,
+            new_end_col,
+            new_length
+        )
             if abbreinder._should_stop then
                 return true
             end
@@ -151,9 +156,10 @@ function abbreinder.start()
             local cur_char = line:sub(start_col + 1, start_col + 1)
             abbreinder._keylogger = abbreinder._keylogger .. cur_char
 
-
-            local user_backspaced = cur_char == '' and new_end_col == old_end_col - 1 and
-                new_end_row == old_end_row and new_length == 0
+            local user_backspaced = cur_char == ''
+                and new_end_col == old_end_col - 1
+                and new_end_row == old_end_row
+                and new_length == 0
 
             if user_backspaced then
                 handle_backspacing(true)
@@ -167,17 +173,14 @@ end
 
 -- @return value if val_after_nk points to abbr value, else false
 function abbreinder._contains_nk_abbr(text, val_after_nk)
-
     if not abbreinder._cache.last_chunk_to_full_values[val_after_nk] then
         return false
     end
 
     local potential_values = abbreinder._cache.last_chunk_to_full_values[val_after_nk]
 
-    for _,value in ipairs(potential_values) do
-        if abbreinder._cache.value_to_trigger[value] and
-            string.find(text, value, #text - #value, true)
-        then
+    for _, value in ipairs(potential_values) do
+        if abbreinder._cache.value_to_trigger[value] and string.find(text, value, #text - #value, true) then
             return value
         end
     end
@@ -185,12 +188,10 @@ function abbreinder._contains_nk_abbr(text, val_after_nk)
     return false
 end
 
-
 -- @Summary searches through what has been typed since the user last typed
 -- an abbreviation-expanding character, to see if an abbreviation has been used
 -- @return trigger, value. or -1 if not found
 function abbreinder._find_abbrev(cur_char)
-
     local keyword_regex = vim.regex('[[:keyword:]]')
     local not_trigger_char = keyword_regex:match_str(cur_char)
     if not_trigger_char then
@@ -216,7 +217,6 @@ function abbreinder._find_abbrev(cur_char)
         local nk_trigger = value_to_trigger[nk_value]
         abbreinder._check_abbrev_remembered(nk_trigger, nk_value)
         return nk_trigger, nk_value
-
     elseif potential_trigger then
         abbreinder._check_abbrev_remembered(potential_trigger, potential_value)
         return potential_trigger, potential_value
@@ -230,7 +230,6 @@ end
 -- @return {-1, 0, 1} - if no abbreviation found (0), if user typed out the full value
 --   instead of using trigger (0), if it was triggered properly (1)
 function abbreinder._check_abbrev_remembered(trigger, value)
-
     local value_trigger = abbreinder._create_abbrev_maps()
     local abbr_exists = value_trigger[value] == trigger
     if not abbr_exists then
@@ -241,8 +240,7 @@ function abbreinder._check_abbrev_remembered(trigger, value)
     local abbr_remembered = expanded_pat:match_str(abbreinder._keylogger)
 
     if abbr_remembered or abbreinder._backspace_data.potential_trigger == trigger then
-
-        vim.cmd [[doautocmd User AbbreinderAbbrExpanded]]
+        vim.cmd([[doautocmd User AbbreinderAbbrExpanded]])
         abbreinder.clear_keylogger()
 
         abbreinder._backspace_data.potential_trigger = ''
@@ -255,7 +253,7 @@ function abbreinder._check_abbrev_remembered(trigger, value)
 
     if abbr_forgotten then
         ui.output_reminder(abbreinder, trigger, value)
-        vim.cmd [[doautocmd User AbbreinderAbbrNotExpanded]]
+        vim.cmd([[doautocmd User AbbreinderAbbrNotExpanded]])
         abbreinder.clear_keylogger()
         return 0
     end
@@ -264,16 +262,13 @@ function abbreinder._check_abbrev_remembered(trigger, value)
 end
 
 local function create_ex_commands()
-
     vim.cmd([[
     command! -bang AbbreinderEnable lua require('abbreinder').enable()
     command! -bang AbbreinderDisable lua require('abbreinder').disable()
     ]])
 end
 
-
 local function create_autocmds()
-
     vim.cmd([[
     augroup Abbreinder
     autocmd!
@@ -283,14 +278,11 @@ local function create_autocmds()
     ]])
 end
 
-
 local function remove_autocmds()
-
     vim.cmd([[
     command! -bang AbbreinderDisable autocmd! Abbreinder
     ]])
 end
-
 
 function abbreinder.disable()
     -- setting this makes `nvim_buf_attach` return true,
@@ -300,7 +292,6 @@ function abbreinder.disable()
     remove_autocmds()
 end
 
-
 function abbreinder.enable()
     abbreinder._should_stop = false
     create_ex_commands()
@@ -308,12 +299,10 @@ function abbreinder.enable()
     abbreinder.start()
 end
 
-
 -- @Summary Sets up abbreinder
 -- @Description launch abbreinder with specified config (falling back to defaults from ./abbreinder/config.lua)
 -- @Param config(table) - user specified config
 function abbreinder.setup(user_config)
-
     user_config = user_config or {}
 
     abbreinder.config = vim.tbl_extend('force', default_config, user_config)

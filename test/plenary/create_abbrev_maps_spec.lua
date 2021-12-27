@@ -3,17 +3,14 @@ local assert = require('luassert.assert')
 local abbreinder = require('abbreinder')
 local helpers = require('test.plenary.helpers')
 
-
 local abbrs = {}
 
 describe('get_abbrevs_val_trigger works correctly if', function()
-
     local keyword, non_keyword = helpers.set_keyword()
 
     it('gets all created abbreviations', function()
-
         helpers.reset() -- technically not needed, but doesn't hurt
-        for _,abbr in ipairs(helpers.abbrs.generic) do
+        for _, abbr in ipairs(helpers.abbrs.generic) do
             abbrs = helpers.create_abbr(abbrs, abbr.trigger, abbr.value)
         end
 
@@ -23,7 +20,6 @@ describe('get_abbrevs_val_trigger works correctly if', function()
 
     -- technically a space might be a keyword. but _highly_ doubt that
     it('can follow values containing non-keywords to the main abbreviation map', function()
-
         local nk_trigger = 'pov'
         local after_last_nk = 'view'
         local nk_val = 'point of' .. non_keyword .. after_last_nk
@@ -38,7 +34,6 @@ describe('get_abbrevs_val_trigger works correctly if', function()
     end)
 
     it('adds abbreviations with special characters to list', function()
-
         local trigger = 'wts'
         local value = "what's"
 
@@ -49,7 +44,6 @@ describe('get_abbrevs_val_trigger works correctly if', function()
     end)
 
     it('adds newly defined abbreviations to the list', function()
-
         abbrs = helpers.create_abbr(abbrs, 'hi', 'hello')
 
         local map_value_trigger = abbreinder._create_abbrev_maps()
@@ -57,8 +51,7 @@ describe('get_abbrevs_val_trigger works correctly if', function()
     end)
 
     it('takes into account modified abbreviations', function()
-
-        local old = { ['key'] = 'anth', ['value'] = 'anthropology'}
+        local old = { ['key'] = 'anth', ['value'] = 'anthropology' }
 
         abbrs = helpers.create_abbr(abbrs, 'anth', 'anthropology')
 
@@ -73,7 +66,6 @@ describe('get_abbrevs_val_trigger works correctly if', function()
     end)
 
     it('handles prefixed abbreviations (eg, supports plugins like vim-abolish)', function()
-
         -- add to abbrs table, but wait for Abolish to actually create it
         abbrs = helpers.create_abbr(abbrs, 'op', 'operation')
         abbrs = helpers.create_abbr(abbrs, 'ops', 'operations')
@@ -90,9 +82,7 @@ describe('get_abbrevs_val_trigger works correctly if', function()
         vim.cmd('Abolish -delete op{,s}')
     end)
 
-
     it('value consists of a single non-keyword char', function()
-
         local abbr = helpers.abbrs.containing_non_keyword.single_char[1]
 
         abbrs = helpers.create_abbr(abbrs, abbr.trigger, abbr.value)
@@ -105,17 +95,16 @@ describe('get_abbrevs_val_trigger works correctly if', function()
     end)
 
     it('two non-keyword-containing values with same ending can coexist', function()
-
         local after_last_nk = 'view'
         local same_ending_abbrs = {
             [1] = {
                 ['trigger'] = 'pov',
-                ['value'] = 'point of' .. non_keyword .. after_last_nk
+                ['value'] = 'point of' .. non_keyword .. after_last_nk,
             },
             [2] = {
                 ['trigger'] = 'nv',
-                ['value'] = 'nice' .. non_keyword .. after_last_nk
-            }
+                ['value'] = 'nice' .. non_keyword .. after_last_nk,
+            },
         }
 
         abbrs = helpers.create_abbr(abbrs, same_ending_abbrs[1].trigger, same_ending_abbrs[1].value)

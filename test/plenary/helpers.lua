@@ -1,4 +1,3 @@
-
 -- imports for use in tests
 require('test.plenary.custom_assertions')
 
@@ -12,7 +11,6 @@ end
 -- @note: if < or > is in text_to_type, it _must_ be part of a special character
 --  eg, <CR>
 local function type_text(text_to_type)
-
     -- if call `feedkeys` on entire string, attach_buffer (@see abbreinder.start)
     -- doesn't get all of the characters
     -- I believe this is due to `:help feedkeys()`
@@ -21,9 +19,7 @@ local function type_text(text_to_type)
     local special_char_flag = false
 
     text_to_type:gsub('.', function(char)
-
         if char == '>' then
-
             special_char_accum = special_char_accum .. '>'
             special_char_flag = false
             local special_char = vim.api.nvim_replace_termcodes(special_char_accum, true, true, true)
@@ -48,38 +44,38 @@ end
 
 local abbr_examples = {
     generic = {
-            [1] = {
-                trigger = 'req',
-                value = 'require'
-            },
-            [2] = {
-                trigger = 'shep',
-                value = 'shepherd'
-            },
-            [3] = {
-                trigger = 'hi',
-                value = 'hello'
-            }
+        [1] = {
+            trigger = 'req',
+            value = 'require',
+        },
+        [2] = {
+            trigger = 'shep',
+            value = 'shepherd',
+        },
+        [3] = {
+            trigger = 'hi',
+            value = 'hello',
+        },
     },
     single_word = {
         generic = {
             [1] = {
                 trigger = 'nvim',
-                value = 'neovim'
-            }
+                value = 'neovim',
+            },
         },
         trig_matches_val = {
             [1] = {
                 trigger = 'trig',
-                value = 'trigger'
-            }
+                value = 'trigger',
+            },
         },
         trig_no_match_val = {
             [1] = {
                 trigger = 'mt',
-                value = 'mountain'
-            }
-        }
+                value = 'mountain',
+            },
+        },
     },
     -- note: technically space might not be keyword
     -- be sure to `value:gsub(' ', non_keyword_char)` when used
@@ -87,15 +83,15 @@ local abbr_examples = {
         generic = {
             [1] = {
                 trigger = 'api',
-                value = 'application programming interface'
-            }
+                value = 'application programming interface',
+            },
         },
         single_char = {
             [1] = {
                 trigger = 'un',
-                value = '∪'
-            }
-        }
+                value = '∪',
+            },
+        },
     },
 }
 
@@ -105,11 +101,9 @@ local function create_abbreviation(abbr)
     vim.cmd([[iabbrev ]] .. abbr.trigger .. [[ ]] .. abbr.value)
 end
 
-
 -- @Summary creates new abbreviation and adds it to list
 local function create_abbr(abbrs, trigger, value)
-
-    local new_abbr = {[value] = trigger}
+    local new_abbr = { [value] = trigger }
     vim.cmd('iabbrev ' .. trigger .. ' ' .. value)
     abbrs = vim.tbl_extend('keep', abbrs, new_abbr)
 
@@ -117,7 +111,6 @@ local function create_abbr(abbrs, trigger, value)
 end
 
 local function remove_abbr(abbrs, trigger, value)
-
     abbrs[value] = nil
     vim.cmd('unabbreviate ' .. trigger)
 
@@ -130,7 +123,6 @@ local old_iskeyword = nil
 -- @return a keyword char and a non-keyword char
 -- note: non-keyword = triggers abbreviation expansion
 local function set_keyword()
-
     local keyword = '_'
     local non_keyword = '$'
     old_iskeyword = vim.api.nvim_get_option('iskeyword')
@@ -141,7 +133,6 @@ end
 
 -- @Summary sets `iskeyword` back to previous value and clears all abbreviations
 local function reset()
-
     if old_iskeyword ~= nil then
         vim.api.nvim_set_option('iskeyword', old_iskeyword)
         old_iskeyword = nil
@@ -150,21 +141,18 @@ local function reset()
     vim.cmd('iabclear')
 end
 
-
 -- @Summary runs test on multiple abbr categories (eg, value is single or multi word)
 -- @param testFn - function(category: string, abbr)
 --   and abbr will be {trigger: string, value: string}
 local function run_multi_category_tests(non_keyword, testFn)
-
     testFn('single', abbr_examples.single_word.generic[1])
 
     local contains_non_key = abbr_examples.containing_non_keyword.generic[1]
     local contains_nk_val = contains_non_key.value:gsub(' ', non_keyword)
-    local nk_abbr = {trigger = contains_non_key.trigger, value = contains_nk_val}
+    local nk_abbr = { trigger = contains_non_key.trigger, value = contains_nk_val }
 
     testFn('containing non_keyword chars', nk_abbr)
 end
-
 
 return {
     type_text = type_text,

@@ -5,7 +5,6 @@ local ui = require('abbreinder.ui')
 local helpers = require('test.plenary.helpers')
 
 describe('check_abbrev_remembered', function()
-
     local trigger = helpers.abbrs.generic[1].trigger
     local value = helpers.abbrs.generic[1].value
     helpers.create_abbr({}, trigger, value)
@@ -13,7 +12,7 @@ describe('check_abbrev_remembered', function()
     -- removed at eof. plenary doesn't support teardown()
     local keyword, non_keyword = helpers.set_keyword()
 
-    stub(abbreinder, '_get_abbrevs_val_trigger').returns({[value] = trigger})
+    stub(abbreinder, '_get_abbrevs_val_trigger').returns({ [value] = trigger })
     before_each(function()
         stub(ui, 'output_reminder').returns(nil)
     end)
@@ -22,9 +21,7 @@ describe('check_abbrev_remembered', function()
         ui.output_reminder:revert()
     end)
 
-
     it('identifies when an abbreviation _was_ expanded', function()
-
         abbreinder._keylogger = trigger .. non_keyword .. value
 
         local remembered = abbreinder._check_abbrev_remembered(trigger, value)
@@ -33,7 +30,6 @@ describe('check_abbrev_remembered', function()
     end)
 
     it('identifies when an abbreviation was _not_ expanded', function()
-
         abbreinder._keylogger = 'random no trigger stuff ' .. value .. non_keyword
 
         local remembered = abbreinder._check_abbrev_remembered(trigger, value)
@@ -42,7 +38,6 @@ describe('check_abbrev_remembered', function()
     end)
 
     it('identifies when something is _not_ a potential abbreviation', function()
-
         abbreinder._keylogger = value .. keyword
 
         local remembered = abbreinder._check_abbrev_remembered(trigger, value)
@@ -51,9 +46,7 @@ describe('check_abbrev_remembered', function()
     end)
 
     describe('identifies correctly if called twice in a row and', function()
-
         it('first time expanded, second not expanded', function()
-
             abbreinder._keylogger = trigger .. non_keyword .. value .. non_keyword
 
             local remembered = abbreinder._check_abbrev_remembered(trigger, value)
@@ -65,7 +58,6 @@ describe('check_abbrev_remembered', function()
         end)
 
         it('first time not an abbreviation, second not expanded', function()
-
             abbreinder._keylogger = value .. keyword
 
             local remembered = abbreinder._check_abbrev_remembered(trigger, value)
