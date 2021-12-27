@@ -1,6 +1,5 @@
 local api = vim.api;
 local ui = {
-    tooltip = {},
 }
 
 -- @return zero indexed current line num, index of value on line, index of value end

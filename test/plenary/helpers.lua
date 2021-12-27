@@ -20,7 +20,7 @@ local function type_text(text_to_type)
     local special_char_accum = ''
     local special_char_flag = false
 
-    text_to_type:gsub(".", function(char)
+    text_to_type:gsub('.', function(char)
 
         if char == '>' then
 

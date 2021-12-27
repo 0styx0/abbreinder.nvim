@@ -20,13 +20,13 @@ describe('integration tests', function()
         -- check anything except output_reminder. but helps for
         -- debugging tests
         spied_check_remembered = spy.on(abbreinder, '_check_abbrev_remembered')
-        spied_find = spy.on(abbreinder, 'find_abbrev')
+        spied_find = spy.on(abbreinder, '_find_abbrev')
         spied_output_reminder = spy.on(ui, 'output_reminder')
     end)
 
     after_each(function()
         abbreinder._check_abbrev_remembered:revert()
-        abbreinder.find_abbrev:revert()
+        abbreinder._find_abbrev:revert()
         ui.output_reminder:revert()
     end)
 
@@ -37,7 +37,7 @@ describe('integration tests', function()
             helpers.create_abbr({}, abbr.trigger, abbr.value)
             helpers.type_text(abbr.value .. non_keyword)
 
-            assert.spy(spied_find, 'find_abbrev').was_called()
+            assert.spy(spied_find, '_find_abbrev').was_called()
             assert.spy(spied_check_remembered, 'remembered').was_called()
             assert.spy(spied_output_reminder, 'reminder').was_called()
         end)
@@ -52,7 +52,7 @@ describe('integration tests', function()
         helpers.create_abbr({}, abbr.trigger, abbr.value)
         helpers.type_text(expanding_trigger .. non_keyword)
 
-        assert.spy(spied_find, 'find_abbrev').was_called()
+        assert.spy(spied_find, '_find_abbrev').was_called()
         assert.spy(spied_check_remembered, 'remembered').was_not_called()
         assert.spy(spied_output_reminder, 'reminder').was_not_called()
     end)
@@ -65,12 +65,12 @@ describe('integration tests', function()
 
         helpers.type_text(abbr.trigger .. non_keyword)
 
-        assert.spy(spied_find, 'find_abbrev').was_called()
+        assert.spy(spied_find, '_find_abbrev').was_called()
         assert.spy(spied_check_remembered, 'remembered').was_not_called()
         assert.spy(spied_output_reminder, 'reminder').was_not_called()
     end)
 
-    it("reminds about forgotten abbr even if backspace in value", function()
+    it('reminds about forgotten abbr even if backspace in value', function()
 
         local abbr = {trigger = 'hello', value = 'goodbye'}
 
@@ -78,7 +78,7 @@ describe('integration tests', function()
 
         helpers.type_text('good<BS>dbye' .. non_keyword)
 
-        assert.spy(spied_find, 'find_abbrev').was_called()
+        assert.spy(spied_find, '_find_abbrev').was_called()
         assert.spy(spied_check_remembered, 'remembered').was_called()
         assert.spy(spied_output_reminder, 'reminder').was_called()
     end)
