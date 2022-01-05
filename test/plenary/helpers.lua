@@ -1,52 +1,47 @@
 -- imports for use in tests
 require('test.plenary.custom_assertions')
+local abbreinder = require('abbreinder')
 
 -- @Summary vim deletes trigger on abbreviation expansion. this simulates it
 local function format_trigger_expanding(trigger)
     return trigger .. string.rep('<BS>', #trigger)
 end
 
+-- runs nvim_replace_termcodes on str for use in nvim_feedkeys
+local function escape_str(str)
+    return vim.api.nvim_replace_termcodes(str, true, true, true)
+end
+
 -- @Summary write `text` to current buffer, triggering all regular
 -- insert functionality (including autocmds and abbrev expansion)
--- @note: if < or > is in text_to_type, it _must_ be part of a special character
---  eg, <CR>
-local function type_text(text_to_type)
-    -- if call `feedkeys` on entire string, attach_buffer (@see abbreinder.start)
-    -- doesn't get all of the characters
-    -- I believe this is due to `:help feedkeys()`
-    --  > The function does not wait for processing of keys contained in {string}
-    local special_char_accum = ''
-    local special_char_flag = false
+-- @param queue {boolean} - whether to trigger typing functionality or not
+--   if falsey, can run what's in the queue by calling `nvim_feedkeys('', 'x')`
+-- @param keep_buf {boolean} - whether to clear all text from the buffer before writing
+--   if true, it is assumed the current mode is insert mode
+local function type_text(text_to_type, queue, keep_buf)
 
-    text_to_type:gsub('.', function(char)
-        if char == '>' then
-            special_char_accum = special_char_accum .. '>'
-            special_char_flag = false
-            local special_char = vim.api.nvim_replace_termcodes(special_char_accum, true, true, true)
-            vim.api.nvim_feedkeys('a' .. special_char, 'xt', false)
-            return
-        end
+    -- local flags = 'mt'
+    -- if not queue then
+    --     flags = flags .. 'x'
+    -- end
+    --
+    -- local escaped = escape_str(text_to_type)
+    --
+    -- if not keep_buf then
+    --     vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
+    --     escaped = 'a' .. escaped
+    -- end
 
-        if special_char_flag then
-            special_char_accum = special_char_accum .. char
-            return
-        end
+    vim.api.nvim_feedkeys('a' .. text_to_type, 'x', true)
 
-        if char == '<' then
-            special_char_flag = true
-            special_char_accum = '<'
-            return
-        end
-
-        vim.api.nvim_feedkeys('a' .. char, 'xt', false)
-    end)
+    return vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
 end
 
 local abbr_examples = {
     generic = {
         [1] = {
             trigger = 'req',
-            value = 'require',
+            value = 'requirer',
         },
         [2] = {
             trigger = 'shep',

@@ -14,7 +14,7 @@ describe('_find_abbrev', function()
     it('short circuits if abbreviation not possible', function()
         -- matchstrpos just happens to be a method used in _find_abbrev
         local spied_matchstrpos = spy.on(vim.fn, 'matchstrpos')
-        abbreinder._find_abbrev(keyword)
+        abbreinder._find_abbrev(keyword, abbreinder._keylogger)
 
         assert.spy(spied_matchstrpos).was_not_called()
         vim.fn.matchstrpos:revert()
@@ -29,7 +29,7 @@ describe('_find_abbrev', function()
         helpers.create_abbr({}, trigger, value)
 
         abbreinder._keylogger = 'random text ' .. value .. non_keyword
-        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword)
+        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
 
         assert.are.same(trigger, actual_trigger)
         assert.are.same(value, actual_value)
@@ -42,7 +42,7 @@ describe('_find_abbrev', function()
         helpers.create_abbr({}, trigger, value)
 
         abbreinder._keylogger = 'random text ' .. value .. non_keyword
-        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword)
+        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
 
         assert.are.same(trigger, actual_trigger)
         assert.are.same(value, actual_value)
@@ -55,7 +55,7 @@ describe('_find_abbrev', function()
         helpers.create_abbr({}, trigger, value)
 
         abbreinder._keylogger = 'random text ' .. value .. non_keyword
-        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword)
+        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
 
         assert.are.same(trigger, actual_trigger)
         assert.are.same(value, actual_value)
@@ -68,7 +68,7 @@ describe('_find_abbrev', function()
         helpers.create_abbr({}, trigger, value)
 
         abbreinder._keylogger = 'random text ' .. value .. non_keyword
-        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword)
+        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
 
         assert.are.same(trigger, actual_trigger)
         assert.are.same(value, actual_value)
@@ -79,7 +79,7 @@ describe('_find_abbrev', function()
             helpers.create_abbr({}, abbr.trigger, abbr.value)
 
             abbreinder._keylogger = 'random text ' .. abbr.value .. non_keyword
-            local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword)
+            local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
 
             assert.are.same(abbr.trigger, actual_trigger)
             assert.are.same(abbr.value, actual_value)
@@ -94,7 +94,7 @@ describe('_find_abbrev', function()
             helpers.create_abbr({}, abbr.trigger, abbr.value)
 
             abbreinder._keylogger = abbreinder._keylogger .. ' random text ' .. abbr.value .. non_keyword
-            local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword)
+            local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
 
             assert.are.same(abbr.trigger, actual_trigger, i .. 'th abbrev')
             assert.are.same(abbr.value, actual_value)

@@ -148,6 +148,8 @@ function abbreinder.start()
             -- if don't have this, then the nvim_buf_get_lines will throw out of bounds error
             -- even if not actually accessing an index of it, even though start_row is a valid index
             if vim.fn.mode() ~= 'i' then
+                -- allows for reminders to take into account normal mode changes
+                abbreinder._keylogger = vim.fn.getline('.')
                 return false
             end
 
@@ -155,6 +157,9 @@ function abbreinder.start()
 
             local cur_char = line:sub(start_col + 1, start_col + 1)
             abbreinder._keylogger = abbreinder._keylogger .. cur_char
+
+            local cursor_col = start_col + new_end_col
+            local line_until_cursor = line:sub(0, cursor_col)
 
             local user_backspaced = cur_char == ''
                 and new_end_col == old_end_col - 1
@@ -164,7 +169,7 @@ function abbreinder.start()
             if user_backspaced then
                 handle_backspacing(true)
             else
-                abbreinder._find_abbrev(cur_char)
+                abbreinder._find_abbrev(cur_char, line_until_cursor)
                 handle_backspacing(false)
             end
         end,
@@ -191,34 +196,36 @@ end
 -- @Summary searches through what has been typed since the user last typed
 -- an abbreviation-expanding character, to see if an abbreviation has been used
 -- @return trigger, value. or -1 if not found
-function abbreinder._find_abbrev(cur_char)
+function abbreinder._find_abbrev(cur_char, line_until_cursor)
+
     local keyword_regex = vim.regex('[[:keyword:]]')
     local not_trigger_char = keyword_regex:match_str(cur_char)
+
     if not_trigger_char then
         return -1
     end
 
     local value_regex = vim.regex('[[:keyword:]]\\+[^[:keyword:]]\\+$')
-    local val_start, val_end = value_regex:match_str(abbreinder._keylogger)
+    local val_start, val_end = value_regex:match_str(line_until_cursor)
     if not val_start then
         return -1
     end
 
     val_start = val_start + 1
     val_end = val_end - 1
-    local potential_value = abbreinder._keylogger:sub(val_start, val_end)
+    local potential_value = line_until_cursor:sub(val_start, val_end)
 
     local value_to_trigger = abbreinder._create_abbrev_maps()
     local potential_trigger = value_to_trigger[potential_value]
 
     -- potential_value only contains characters after last non-keyword char
-    local nk_value = abbreinder._contains_nk_abbr(abbreinder._keylogger, potential_value)
+    local nk_value = abbreinder._contains_nk_abbr(line_until_cursor, potential_value)
     if nk_value then
         local nk_trigger = value_to_trigger[nk_value]
-        abbreinder._check_abbrev_remembered(nk_trigger, nk_value)
+        abbreinder._check_abbrev_remembered(nk_trigger, nk_value, line_until_cursor)
         return nk_trigger, nk_value
     elseif potential_trigger then
-        abbreinder._check_abbrev_remembered(potential_trigger, potential_value)
+        abbreinder._check_abbrev_remembered(potential_trigger, potential_value, line_until_cursor)
         return potential_trigger, potential_value
     end
 
@@ -229,7 +236,7 @@ end
 --   if value was manually typed, notify user
 -- @return {-1, 0, 1} - if no abbreviation found (0), if user typed out the full value
 --   instead of using trigger (0), if it was triggered properly (1)
-function abbreinder._check_abbrev_remembered(trigger, value)
+function abbreinder._check_abbrev_remembered(trigger, value, line_until_cursor)
     local value_trigger = abbreinder._create_abbrev_maps()
     local abbr_exists = value_trigger[value] == trigger
     if not abbr_exists then
@@ -239,22 +246,26 @@ function abbreinder._check_abbrev_remembered(trigger, value)
     local expanded_pat = vim.regex(trigger .. '[^[:keyword:]]' .. value)
     local abbr_remembered = expanded_pat:match_str(abbreinder._keylogger)
 
-    if abbr_remembered or abbreinder._backspace_data.potential_trigger == trigger then
-        vim.cmd([[doautocmd User AbbreinderAbbrExpanded]])
-        abbreinder.clear_keylogger()
+    local expanded_midline_pat = vim.regex(trigger .. '[[:keyword:]]\\{'..#trigger..'}' .. value)
+    local abbr_remembered_midline = expanded_midline_pat:match_str(abbreinder._keylogger)
 
+    if abbr_remembered or abbreinder._backspace_data.potential_trigger == trigger or abbr_remembered_midline then
+        abbreinder.clear_keylogger()
+        vim.cmd([[doautocmd User AbbreinderAbbrExpanded]])
         abbreinder._backspace_data.potential_trigger = ''
 
         return 1
     end
 
     local forgotten_pat = vim.regex(value .. '[^[:keyword:]]')
-    local abbr_forgotten = forgotten_pat:match_str(abbreinder._keylogger)
+    local abbr_forgotten = forgotten_pat:match_str(line_until_cursor)
 
-    if abbr_forgotten then
+    local val_in_logger = string.find(abbreinder._keylogger, value, 1, true)
+
+    if abbr_forgotten and val_in_logger then
+        abbreinder.clear_keylogger()
         ui.output_reminder(abbreinder, trigger, value)
         vim.cmd([[doautocmd User AbbreinderAbbrNotExpanded]])
-        abbreinder.clear_keylogger()
         return 0
     end
 
