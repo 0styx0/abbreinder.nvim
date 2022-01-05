@@ -19,7 +19,6 @@ end
 -- @param keep_buf {boolean} - whether to clear all text from the buffer before writing
 --   if true, it is assumed the current mode is insert mode
 local function type_text(text_to_type, queue, keep_buf)
-
     -- local flags = 'mt'
     -- if not queue then
     --     flags = flags .. 'x'

@@ -197,7 +197,6 @@ end
 -- an abbreviation-expanding character, to see if an abbreviation has been used
 -- @return trigger, value. or -1 if not found
 function abbreinder._find_abbrev(cur_char, line_until_cursor)
-
     local keyword_regex = vim.regex('[[:keyword:]]')
     local not_trigger_char = keyword_regex:match_str(cur_char)
 
@@ -246,7 +245,7 @@ function abbreinder._check_abbrev_remembered(trigger, value, line_until_cursor)
     local expanded_pat = vim.regex(trigger .. '[^[:keyword:]]' .. value)
     local abbr_remembered = expanded_pat:match_str(abbreinder._keylogger)
 
-    local expanded_midline_pat = vim.regex(trigger .. '[[:keyword:]]\\{'..#trigger..'}' .. value)
+    local expanded_midline_pat = vim.regex(trigger .. '[[:keyword:]]\\{' .. #trigger .. '}' .. value)
     local abbr_remembered_midline = expanded_midline_pat:match_str(abbreinder._keylogger)
 
     if abbr_remembered or abbreinder._backspace_data.potential_trigger == trigger or abbr_remembered_midline then
