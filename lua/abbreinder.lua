@@ -283,8 +283,8 @@ local function create_autocmds()
     vim.cmd([[
     augroup Abbreinder
     autocmd!
-    autocmd BufReadPre * :lua require('abbreinder').clear_keylogger()
-    autocmd BufReadPre * :lua require('abbreinder').start()
+    autocmd BufNewFile,BufReadPre * :lua require('abbreinder').clear_keylogger()
+    autocmd BufNewFile,BufReadPre * :lua require('abbreinder').start()
     augroup END
     ]])
 end

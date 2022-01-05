@@ -1,4 +1,10 @@
-### What to test
+### How to test
++ Unit tests: run `make tests`
++ Integration tests:
+    + `:e test/plenary/integration_manual_tests.lua`
+    + `source % | lua Run_tests()`
+    + Reason it's separate is because I ran into too many bugs trying to mock typing with plenary and feedkeys
+
 
 ### Basic functionality (integration testing)
 + If value typed out
@@ -38,13 +44,6 @@
         + `nonexpandedButPreviouslyCaughtValue1 nonexpandedButCurrentlyWorkingOnValue`
 
 
-#### Known bugs
-Error detected while processing InsertCharPre Autocommands for "\*":
-E5108: Error executing lua .../site/pack/packer/start/abbreinder/lua/abbreinder/ui.lua:15: attempt to perform arithmeti
-c on local 'value_start' (a nil value)
-
-<triggered_abbr>.
-<symbol>
 #### Additional functionality
 + If user backspaces while typing, that's taken into account
     + 'tex<BS>sting' still would trigger reminder about abbreviation `testing`
@@ -55,24 +54,7 @@ c on local 'value_start' (a nil value)
 
 
 
-require.
-require.
-
-require$
-require$
-
-require-
-require-
-
-
-change defers to vim.schedule
-
-
 highlight default link cComment Comment
-
-
-
-
 
 ```vim
 nvim_get_namespaces()                                  *nvim_get_namespaces()*
