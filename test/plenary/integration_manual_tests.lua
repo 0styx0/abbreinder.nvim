@@ -111,13 +111,12 @@ function Abbreinder.tests.if_bs_in_value_reminds(name)
 
 end
 
--- fails
 function Abbreinder.tests.normal_mode_modifies_value_reminds(name)
 
-    local abbr = { trigger = 'thier', value = 'their' }
+    local abbr = { trigger = 'req', value = 'require' }
 
     create_abbreviation(abbr)
-    Write(name, 'thie<Esc>hxpar ', true)
+    Write(name, 'rqe<Esc>hxpauire ', true)
 end
 
 function Abbreinder.tests.expanded_not_reminded(name)
@@ -126,6 +125,15 @@ function Abbreinder.tests.expanded_not_reminded(name)
 
     create_abbreviation(abbr)
     Write(name, abbr.trigger .. ' ', false)
+end
+
+function Abbreinder.tests.trigger_len_equals_val_len_no_remind(name)
+
+    -- annoying to be reminded when type correct spelling
+    local abbr = { trigger = 'thier', value = 'their' }
+
+    create_abbreviation(abbr)
+    Write(name, abbr.value .. ' ', false)
 end
 
 function Abbreinder.tests.expanded_midline_not_reminded(name)
@@ -155,7 +163,7 @@ function Abbreinder.tests.nonexistent_abbr_no_remind(name)
     Write(name, abbr.trigger .. ' ', false)
 end
 
-function Abbreinder.tests.does_nothing_on_insert_mode(name)
+function Abbreinder.tests.does_nothing_on_normal_mode(name)
     Write(name, '<Esc>dd', false)
 end
 
