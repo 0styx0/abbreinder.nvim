@@ -61,9 +61,7 @@ local function create_abbreviation(abbr)
     vim.cmd([[iabbrev ]] .. abbr.trigger .. [[ ]] .. abbr.value)
 end
 
-
 function Write(test_name, str, want_reminder)
-
     local description = '### ' .. test_name
 
     local expected = 'expected: '
@@ -79,7 +77,6 @@ function Write(test_name, str, want_reminder)
     local escaped = vim.api.nvim_replace_termcodes(str, true, true, true)
     vim.api.nvim_feedkeys('a\n' .. escaped, 't', true)
 
-
     local ending = vim.api.nvim_replace_termcodes('<Esc>o' .. '\n\n', true, true, true)
     vim.api.nvim_feedkeys(ending, 'tn', true)
 end
@@ -87,28 +84,22 @@ end
 Abbreinder = {}
 Abbreinder.tests = {}
 
-
 function Abbreinder.tests.single_reminds(name)
-
     local abbr = abbr_examples.single_word.generic[1]
     create_abbreviation(abbr)
     Write(name, abbr.value .. ' ', true)
 end
 
 function Abbreinder.tests.nk_in_val_reminds(name)
-
     local abbr = abbr_examples.containing_non_keyword.generic[1]
     create_abbreviation(abbr)
     Write(name, abbr.value .. ' ', true)
 end
 
-
 function Abbreinder.tests.if_bs_in_value_reminds(name)
-
     local abbr = { trigger = 'hello', value = 'goodbye' }
     create_abbreviation(abbr)
     Write(name, 'good<BS>dbye ', true)
-
 end
 
 function Abbreinder.tests.normal_mode_modifies_value_reminds(name)
@@ -120,7 +111,6 @@ function Abbreinder.tests.normal_mode_modifies_value_reminds(name)
 end
 
 function Abbreinder.tests.expanded_not_reminded(name)
-
     local abbr = abbr_examples.generic[1]
 
     create_abbreviation(abbr)
@@ -137,17 +127,15 @@ function Abbreinder.tests.trigger_len_equals_val_len_no_remind(name)
 end
 
 function Abbreinder.tests.expanded_midline_not_reminded(name)
-
     local abbr = abbr_examples.generic[1]
     create_abbreviation(abbr)
 
     local last_word = 'line'
-    local go_back =  string.rep('<Left>', #last_word + 1)
+    local go_back = string.rep('<Left>', #last_word + 1)
     Write(name, 'something on line ' .. go_back .. abbr.trigger .. ' ', false)
 end
 
 function Abbreinder.tests.go_back_to_value_from_elsewhere_no_remind(name)
-
     local abbr = abbr_examples.generic[1]
     create_abbreviation(abbr)
 
@@ -155,7 +143,6 @@ function Abbreinder.tests.go_back_to_value_from_elsewhere_no_remind(name)
 end
 
 function Abbreinder.tests.nonexistent_abbr_no_remind(name)
-
     local abbr = { trigger = 'nothing', value = 'here' }
     -- since abbr doesn't exist, would throw error
     pcall(vim.cmd, 'unabbreviate ' .. abbr.trigger)
@@ -168,7 +155,6 @@ function Abbreinder.tests.does_nothing_on_normal_mode(name)
 end
 
 function Run_tests()
-
     vim.cmd('edit test/plenary/integration_test_output.md')
     vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 
@@ -176,4 +162,3 @@ function Run_tests()
         Abbreinder.tests[key](key)
     end
 end
-
