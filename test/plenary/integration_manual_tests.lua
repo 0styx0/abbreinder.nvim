@@ -103,7 +103,6 @@ function Abbreinder.tests.if_bs_in_value_reminds(name)
 end
 
 function Abbreinder.tests.normal_mode_modifies_value_reminds(name)
-
     local abbr = { trigger = 'req', value = 'require' }
 
     create_abbreviation(abbr)
@@ -118,7 +117,6 @@ function Abbreinder.tests.expanded_not_reminded(name)
 end
 
 function Abbreinder.tests.trigger_len_equals_val_len_no_remind(name)
-
     -- annoying to be reminded when type correct spelling
     local abbr = { trigger = 'thier', value = 'their' }
 

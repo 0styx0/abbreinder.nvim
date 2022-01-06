@@ -262,7 +262,6 @@ function abbreinder._check_abbrev_remembered(trigger, value, line_until_cursor)
     local val_in_logger = string.find(abbreinder._keylogger, value, 1, true)
 
     if abbr_forgotten and val_in_logger then
-
         abbreinder.clear_keylogger()
         vim.cmd([[doautocmd User AbbreinderAbbrNotExpanded]])
 
