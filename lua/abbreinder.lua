@@ -21,6 +21,7 @@ local abbreinder = {
         potential_trigger = '',
     },
     _should_stop = false,
+    ui = ui
 }
 
 -- @param value - containing at least one non-keyword character
@@ -287,6 +288,7 @@ local function create_autocmds()
     autocmd!
     autocmd BufNewFile,BufReadPre * :lua require('abbreinder').clear_keylogger()
     autocmd BufNewFile,BufReadPre * :lua require('abbreinder').start()
+    autocmd TextChanged,TextChangedI * :lua require('abbreinder').ui.monitor_reminders()
     augroup END
     ]])
 end
