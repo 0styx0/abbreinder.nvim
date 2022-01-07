@@ -102,6 +102,8 @@ function Abbreinder.tests.if_bs_in_value_reminds(name)
     Write(name, 'good<BS>dbye ', true)
 end
 
+-- NOTE: for some reason during test it shows as no reminder
+-- but in practice, this does work. check manually to be sure
 function Abbreinder.tests.normal_mode_modifies_value_reminds(name)
     local abbr = { trigger = 'req', value = 'require' }
 
