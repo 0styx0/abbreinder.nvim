@@ -7,7 +7,6 @@ local ui = {
 
 -- @return zero indexed current line num, index of value on line, index of value end
 function ui.get_coordinates(value)
-
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
 
     local line_num = row - 1
@@ -22,7 +21,6 @@ local function close_tooltip(win_id)
         api.nvim_win_close(win_id, true)
     end
 end
-
 
 local function open_tooltip(abbreinder, value, text, ext_id)
     local buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
@@ -63,17 +61,17 @@ local function open_tooltip(abbreinder, value, text, ext_id)
 end
 
 function ui.monitor_reminders()
-
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
 
     local ns_id = api.nvim_create_namespace(ns_name)
 
-    local marks = vim.api.nvim_buf_get_extmarks(0, ns_id, {row - 1, 0}, {row+1, 0}, {details = true})
+    local marks = vim.api.nvim_buf_get_extmarks(0, ns_id, { row - 1, 0 }, { row + 1, 0 }, { details = true })
 
-    if vim.tbl_isempty(marks) then return end
+    if vim.tbl_isempty(marks) then
+        return
+    end
 
     for _, value in ipairs(marks) do
-
         local ext_id, row, col, details = unpack(value)
 
         local line = vim.api.nvim_get_current_line()
@@ -102,7 +100,7 @@ local function highlight_unexpanded_abbr(abbreinder, value)
     })
 
     ui._ext_data[ext_id] = {
-        original_text = value
+        original_text = value,
     }
 
     if abbreinder.config.output.msg.highlight_time ~= -1 then

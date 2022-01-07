@@ -21,7 +21,7 @@ local abbreinder = {
         potential_trigger = '',
     },
     _should_stop = false,
-    ui = ui
+    ui = ui,
 }
 
 -- @param value - containing at least one non-keyword character
