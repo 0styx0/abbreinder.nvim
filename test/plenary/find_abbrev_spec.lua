@@ -12,12 +12,12 @@ describe('_find_abbrev', function()
     stub(abbreinder, '_check_abbrev_remembered').returns(nil)
 
     it('short circuits if abbreviation not possible', function()
-        -- matchstrpos just happens to be a method used in _find_abbrev
-        local spied_matchstrpos = spy.on(vim.fn, 'matchstrpos')
+        -- _create just happens to be a method used in _find_abbrev
+        local spied_create = spy.on(abbreinder, '_create_abbrev_maps')
         abbreinder._find_abbrev(keyword, abbreinder._keylogger)
 
-        assert.spy(spied_matchstrpos).was_not_called()
-        vim.fn.matchstrpos:revert()
+        assert.spy(spied_create).was_not_called()
+        abbreinder._create_abbrev_maps:revert()
     end)
 
     -- the next three tests handle abbreviations formatted

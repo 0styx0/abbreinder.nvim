@@ -147,9 +147,9 @@ function abbreinder.start()
 
             -- if don't have this, then the nvim_buf_get_lines will throw out of bounds error
             -- even if not actually accessing an index of it, even though start_row is a valid index
-            if vim.fn.mode() ~= 'i' then
+            if vim.api.nvim_get_mode().mode ~= 'i' then
                 -- allows for reminders to take into account normal mode changes
-                abbreinder._keylogger = vim.fn.getline('.')
+                abbreinder._keylogger = vim.api.nvim_get_current_line()
                 return false
             end
 
