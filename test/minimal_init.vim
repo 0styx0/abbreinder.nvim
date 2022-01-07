@@ -1,10 +1,7 @@
 set rtp+=.
-set rtp+=./plenary.nvim
-set noswapfile
-" if have problems like can't find plugin even though installed,
-" ensure not lazy loaded
+set rtp+=vendor/plenary.nvim/
 runtime plugin/plenary.vim
-
+set noswapfile
 
 " note: if shada error, `rm ~/.local/share/nvim/shada/main.shada`
 
