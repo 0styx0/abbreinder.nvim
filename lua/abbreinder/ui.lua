@@ -17,7 +17,8 @@ function ui.get_coordinates(value)
 end
 
 local function close_tooltip(win_id)
-    if api.nvim_win_is_valid(win_id) then
+    -- nvim_win_is_valid doesn't check if id is nil
+    if win_id ~= nil and api.nvim_win_is_valid(win_id) then
         api.nvim_win_close(win_id, true)
     end
 end
@@ -52,8 +53,6 @@ local function open_tooltip(abbreinder, value, text, ext_id)
     local tooltip_id = api.nvim_open_win(buf, false, opts)
     api.nvim_buf_add_highlight(buf, -1, abbreinder.config.output.tooltip.highlight, 0, 0, -1)
     ui._ext_data[ext_id].tooltip_id = tooltip_id
-
-    table.insert(ui._tooltip_ids, tooltip_id, tooltip_id)
 
     vim.defer_fn(function()
         close_tooltip(tooltip_id)

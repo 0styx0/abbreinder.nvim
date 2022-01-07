@@ -320,7 +320,7 @@ end
 function abbreinder.setup(user_config)
     user_config = user_config or {}
 
-    abbreinder.config = vim.tbl_extend('force', default_config, user_config)
+    abbreinder.config = vim.tbl_deep_extend('force', default_config, user_config)
     abbreinder.enable()
 end
 
