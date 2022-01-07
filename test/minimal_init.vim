@@ -1,5 +1,5 @@
 set rtp+=.
-set rtp+=vendor/plenary.nvim/
+set rtp+=vendor/plenary/
 runtime plugin/plenary.vim
 set noswapfile
 
@@ -13,7 +13,8 @@ set noswapfile
 " issue and successfully triggers on_bytes as intended (possibly by
 " jumstarting the event queue on each insertion, idk). took me a while to solve.
 " although since I still couldn't get it working, I'm pretty sure this is a
-" piece of the solution but I'm giving up
+" piece of the solution but I'm giving up.
+" moved to using ./test/plenary/integration_manual_tests.lua
 " autocmd InsertCharPre * :lua require('abbreinder')._keylogger = require('abbreinder')._keylogger:sub(1, -2)
 
 lua << EOF

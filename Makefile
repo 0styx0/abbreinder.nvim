@@ -1,5 +1,9 @@
-tests:
-	nvim --headless -i NONE --noplugin -u test/minimal_init.vim -c "PlenaryBustedDirectory test/plenary/ {minimal_init = 'test/minimal_init.vim'}"
+prepare:
+	@git submodule update --depth 1 --init
 
-testfile:
-	nvim --headless -i NONE --noplugin -u test/minimal_init.vim -c "PlenaryBustedFile $(FILE)"
+test: prepare
+	@nvim \
+			--headless \
+			--noplugin \
+			-u test/minimal_init.vim \
+			-c "PlenaryBustedDirectory test/ { minimal_init = 'test/minimal_init.vim' }"
