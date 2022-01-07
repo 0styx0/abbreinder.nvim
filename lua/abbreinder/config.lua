@@ -17,7 +17,7 @@ local config_defaults = {
             opts = {}, -- see :help nvim_open_win
             highlight = 'Special',
         },
-    }
+    },
 }
 
 return config_defaults

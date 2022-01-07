@@ -68,7 +68,7 @@ describe('get_abbrevs_val_trigger works correctly if', function()
     -- implies support for vim-abolish
     it('handles prefixed abbreviations', function()
         local abbr = { trigger = 'op', value = 'operation' }
-        vim.cmd('iabbrev <buffer> '..abbr.trigger..' '..abbr.value)
+        vim.cmd('iabbrev <buffer> ' .. abbr.trigger .. ' ' .. abbr.value)
 
         local map_value_trigger = abbreinder._create_abbrev_maps()
 
