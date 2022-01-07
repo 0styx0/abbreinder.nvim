@@ -68,9 +68,8 @@ function abbreinder._create_abbrev_maps()
 
     for trigger, value in abbrevs:gmatch('i%s%s(.-)%s%s*(.-)\n') do
         -- support for plugins such as vim-abolish, which adds prefix
-        for _, prefix in ipairs(abbreinder.config.value_prefixes) do
-            value = value:gsub('^' .. prefix, '')
-        end
+        -- see :help map /can appear
+        value = string.gsub(value, '^[*&@]+', '')
 
         local value_contains_non_keyword_pat = vim.regex('[^[:keyword:]]')
         local value_contains_non_keyword = value_contains_non_keyword_pat:match_str(value)

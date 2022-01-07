@@ -65,21 +65,14 @@ describe('get_abbrevs_val_trigger works correctly if', function()
         assert.are.same(abbrs, map_value_trigger_updated, 'updated abbrev')
     end)
 
-    it('handles prefixed abbreviations (eg, supports plugins like vim-abolish)', function()
-        -- add to abbrs table, but wait for Abolish to actually create it
-        abbrs = helpers.create_abbr(abbrs, 'op', 'operation')
-        abbrs = helpers.create_abbr(abbrs, 'ops', 'operations')
-        vim.cmd('unabbreviate op')
-        vim.cmd('unabbreviate ops')
+    -- implies support for vim-abolish
+    it('handles prefixed abbreviations', function()
+        local abbr = { trigger = 'op', value = 'operation' }
+        vim.cmd('iabbrev <buffer> '..abbr.trigger..' '..abbr.value)
 
-        vim.cmd('Abolish op{,s} operation{,s}')
+        local map_value_trigger = abbreinder._create_abbrev_maps()
 
-        assert.are.same(abbrs['operations'], 'ops')
-        assert.are.same(abbrs['operation'], 'op')
-
-        abbrs = helpers.remove_abbr(abbrs, 'op', 'operation')
-        abbrs = helpers.remove_abbr(abbrs, 'ops', 'operations')
-        vim.cmd('Abolish -delete op{,s}')
+        assert.are.same(abbr.trigger, map_value_trigger[abbr.value])
     end)
 
     it('value consists of a single non-keyword char', function()

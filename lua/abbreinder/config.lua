@@ -17,10 +17,7 @@ local config_defaults = {
             opts = {}, -- see :help nvim_open_win
             highlight = 'Special',
         },
-    },
-    -- vim-abolish prefixes each abbreviation value.
-    -- adding prefixes here accounts for them
-    value_prefixes = { '*@' },
+    }
 }
 
 return config_defaults
