@@ -329,6 +329,7 @@ function abbreinder.disable()
     -- @see abbreinder.start
     abbreinder._should_stop = true
     remove_autocmds()
+    abbreinder._enabled = false
 end
 
 function abbreinder.enable()
@@ -336,6 +337,7 @@ function abbreinder.enable()
     create_ex_commands()
     create_autocmds()
     abbreinder.start()
+    abbreinder._enabled = true
 end
 
 -- @param callback: function which will receive {trigger, value, row, col, col_end}
