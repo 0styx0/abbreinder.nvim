@@ -1,5 +1,3 @@
-local default_config = require('abbreinder.config')
-local ui = require('abbreinder.ui')
 
 -- note: nk = non-keyword (which can expand abbrevations. but can also be part of abbreviation values)
 -- functions exposed for unit tests prefixed with _. else local, or part of `abbreinder`
@@ -21,7 +19,11 @@ local abbreinder = {
         potential_trigger = '',
     },
     _should_stop = false,
-    ui = ui,
+    _clients = {
+        forgotten = {},
+        remembered = {},
+    },
+    _enabled = false,
 }
 
 -- @param value - containing at least one non-keyword character
@@ -279,14 +281,17 @@ function abbreinder._check_abbrev_remembered(trigger, value, line_until_cursor)
 
     if abbr_forgotten and val_in_logger then
         abbreinder.clear_keylogger()
-        vim.cmd([[doautocmd User AbbreinderAbbrNotExpanded]])
 
         if #trigger ~= #value then
 
 	        local coordinates = abbreinder._get_coordinates(value)
 	        local abbr = { trigger = trigger, value = value }
 	        local abbr_data = vim.tbl_extend('error', abbr, coordinates)
-            ui.output_reminder(abbreinder, abbr_data)
+
+            for _, callback in ipairs(abbreinder._clients.forgotten) do
+                -- ui.output_reminder(abbreinder, abbr_data)
+                callback(abbr_data)
+            end
         end
 
         return 0
@@ -297,25 +302,24 @@ end
 
 local function create_ex_commands()
     vim.cmd([[
-    command! -bang AbbreinderEnable lua require('abbreinder').enable()
-    command! -bang AbbreinderDisable lua require('abbreinder').disable()
+    command! -bang AbbrCmdEnable lua require('abbreinder').enable()
+    command! -bang AbbrCmdDisable lua require('abbreinder').disable()
     ]])
 end
 
 local function create_autocmds()
     vim.cmd([[
-    augroup Abbreinder
+    augroup AbbrCmd
     autocmd!
     autocmd BufNewFile,BufReadPre * :lua require('abbreinder').clear_keylogger()
     autocmd BufNewFile,BufReadPre * :lua require('abbreinder').start()
-    autocmd TextChanged,TextChangedI * :lua require('abbreinder').ui.monitor_reminders()
     augroup END
     ]])
 end
 
 local function remove_autocmds()
     vim.cmd([[
-    command! -bang AbbreinderDisable autocmd! Abbreinder
+    command! -bang AbbrCmdDisable autocmd! AbbrCmd
     ]])
 end
 
@@ -334,14 +338,15 @@ function abbreinder.enable()
     abbreinder.start()
 end
 
--- @Summary Sets up abbreinder
--- @Description launch abbreinder with specified config (falling back to defaults from ./abbreinder/config.lua)
--- @Param config(table) - user specified config
-function abbreinder.setup(user_config)
-    user_config = user_config or {}
-
-    abbreinder.config = vim.tbl_deep_extend('force', default_config, user_config)
-    abbreinder.enable()
+-- @param callback: function which will receive {trigger, value, row, col, col_end}
+-- as arguments when abbreviation was forgotten
+-- TODO: sister function for when remembered
+-- TODO: packer load on require module
+function abbreinder.register_abbr_forgotten(callback)
+    if not abbreinder._enabled then
+        abbreinder.enable()
+    end
+    table.insert(abbreinder._clients.forgotten, callback)
 end
 
 return abbreinder
