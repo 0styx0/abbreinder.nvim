@@ -149,7 +149,8 @@ function abbreinder.start()
             -- even if not actually accessing an index of it, even though start_row is a valid index
             if vim.api.nvim_get_mode().mode ~= 'i' then
                 -- allows for reminders to take into account normal mode changes
-                abbreinder._keylogger = vim.api.nvim_get_current_line()
+                -- using nvim_get_current_line gives out of bounds error for some reason
+                abbreinder._keylogger = vim.fn.getline('.')
                 return false
             end
 
@@ -231,6 +232,21 @@ function abbreinder._find_abbrev(cur_char, line_until_cursor)
     return -1
 end
 
+-- @return zero indexed {row, col, col_end} of value. assumes value ends at cursor pos
+function abbreinder._get_coordinates(value)
+    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+
+    local line_num = row - 1
+    local value_start = col - #value - 1
+    local value_end = col - 1
+
+    return {
+	    row = line_num,
+	    col = value_start,
+	    col_end = value_end
+    }
+end
+
 -- @Summary checks if abbreviation functionality was used.
 --   if value was manually typed, notify user
 -- @return {-1, 0, 1} - if no abbreviation found (0), if user typed out the full value
@@ -266,7 +282,11 @@ function abbreinder._check_abbrev_remembered(trigger, value, line_until_cursor)
         vim.cmd([[doautocmd User AbbreinderAbbrNotExpanded]])
 
         if #trigger ~= #value then
-            ui.output_reminder(abbreinder, trigger, value)
+
+	        local coordinates = abbreinder._get_coordinates(value)
+	        local abbr = { trigger = trigger, value = value }
+	        local abbr_data = vim.tbl_extend('error', abbr, coordinates)
+            ui.output_reminder(abbreinder, abbr_data)
         end
 
         return 0

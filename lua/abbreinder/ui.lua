@@ -5,17 +5,6 @@ local ui = {
     _ext_data = {},
 }
 
--- @return zero indexed current line num, index of value on line, index of value end
-function ui.get_coordinates(value)
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-
-    local line_num = row - 1
-    local value_start = col - #value - 1
-    local value_end = col - 1
-
-    return line_num, value_start, value_end
-end
-
 local function close_tooltip(win_id)
     -- nvim_win_is_valid doesn't check if id is nil
     if win_id ~= nil and api.nvim_win_is_valid(win_id) then
@@ -23,7 +12,7 @@ local function close_tooltip(win_id)
     end
 end
 
-local function open_tooltip(abbreinder, value, text, ext_id)
+local function open_tooltip(abbreinder, abbr_data, text, ext_id)
     local buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
 
     api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
@@ -32,8 +21,6 @@ local function open_tooltip(abbreinder, value, text, ext_id)
     api.nvim_buf_set_lines(buf, 0, -1, true, { text })
     api.nvim_buf_set_option(buf, 'modifiable', false)
     api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>', { silent = true, nowait = true, noremap = true })
-
-    local line_num, abbr_start = ui.get_coordinates(value)
 
     -- set some options
     local opts = {
@@ -44,7 +31,7 @@ local function open_tooltip(abbreinder, value, text, ext_id)
         height = 1,
         focusable = false,
         noautocmd = true,
-        bufpos = { line_num, abbr_start },
+        bufpos = { abbr_data.row, abbr_data.col },
     }
 
     opts = vim.tbl_extend('force', opts, abbreinder.config.output.tooltip.opts)
@@ -87,19 +74,18 @@ end
 
 -- uses extmarks to manage highlights of value based on user-given config
 -- @return ext_id
-local function highlight_unexpanded_abbr(abbreinder, value)
-    local line_num, abbr_start, abbr_end = ui.get_coordinates(value)
+local function highlight_unexpanded_abbr(abbreinder, abbr_data)
     local buf = api.nvim_get_current_buf()
 
     local ns_id = api.nvim_create_namespace(ns_name)
 
-    local ext_id = api.nvim_buf_set_extmark(buf, ns_id, line_num, abbr_start + 1, {
-        end_col = abbr_end + 1,
+    local ext_id = api.nvim_buf_set_extmark(buf, ns_id, abbr_data.row, abbr_data.col + 1, {
+        end_col = abbr_data.col_end + 1,
         hl_group = abbreinder.config.output.msg.highlight,
     })
 
     ui._ext_data[ext_id] = {
-        original_text = value,
+        original_text = abbr_data.value,
     }
 
     if abbreinder.config.output.msg.highlight_time ~= -1 then
@@ -111,17 +97,18 @@ local function highlight_unexpanded_abbr(abbreinder, value)
     return ext_id
 end
 
-function ui.output_reminder(abbreinder, trigger, value)
-    local msg = abbreinder.config.output.msg.format(trigger, value)
+-- @param abbr {trigger, value, row, col, col_end}
+function ui.output_reminder(abbreinder, abbr_data)
+    local msg = abbreinder.config.output.msg.format(abbr_data.trigger, abbr_data.value)
 
-    local ext_id = highlight_unexpanded_abbr(abbreinder, value)
+    local ext_id = highlight_unexpanded_abbr(abbreinder, abbr_data)
 
     if abbreinder.config.output.as.tooltip then
         -- if not deferred, E523 because can't manipulate buffers
         -- on InsertCharPre
-        vim.defer_fn(function()
-            open_tooltip(abbreinder, value, msg, ext_id)
-        end, 0)
+        vim.schedule(function()
+            open_tooltip(abbreinder, abbr_data, msg, ext_id)
+        end)
     end
 
     if abbreinder.config.output.as.echo then

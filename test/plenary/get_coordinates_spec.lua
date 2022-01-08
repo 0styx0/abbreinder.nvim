@@ -1,7 +1,7 @@
 local assert = require('luassert.assert')
 local stub = require('luassert.stub')
 
-local ui = require('abbreinder.ui')
+local abbreinder = require('abbreinder')
 
 local function get_coordinates_helper(value, beginning_text, end_text)
     local start_text = beginning_text
@@ -12,7 +12,7 @@ local function get_coordinates_helper(value, beginning_text, end_text)
     local cursor_col = #beginning_text + #value + 1
     stub(vim.api, 'nvim_win_get_cursor').returns({ cursor_line, cursor_col })
 
-    local line_num, value_start, value_end = ui.get_coordinates(value)
+    local actual_coordinates = abbreinder._get_coordinates(value)
 
     vim.api.nvim_get_current_line:revert()
     vim.api.nvim_win_get_cursor:revert()
@@ -21,9 +21,9 @@ local function get_coordinates_helper(value, beginning_text, end_text)
     local expected_end = expected_start + #value
     local expected_line = cursor_line - 1 -- zero indexing
 
-    assert.equals(expected_line, line_num, 'line index')
-    assert.equals(expected_start, value_start, 'starting col index')
-    assert.equals(expected_end, value_end, 'ending col index')
+    assert.equals(expected_line, actual_coordinates.row, 'line index')
+    assert.equals(expected_start, actual_coordinates.col, 'starting col index')
+    assert.equals(expected_end, actual_coordinates.col_end, 'ending col index')
 end
 
 local function run_tests(test_case, value)
