@@ -1,8 +1,8 @@
 local assert = require('luassert.assert')
 local stub = require('luassert.stub')
 local abbreinder = require('abbreinder')
-local ui = require('abbreinder.ui')
 local helpers = require('test.plenary.helpers')
+local spy = require('luassert.spy')
 
 describe('check_abbrev_remembered', function()
     local trigger = helpers.abbrs.generic[1].trigger
@@ -11,14 +11,17 @@ describe('check_abbrev_remembered', function()
 
     -- removed at eof. plenary doesn't support teardown()
     local keyword, non_keyword = helpers.set_keyword()
+    local spied_callback;
 
     stub(abbreinder, '_get_abbrevs_val_trigger').returns({ [value] = trigger })
+
     before_each(function()
-        stub(ui, 'output_reminder').returns(nil)
+        spied_callback = spy.new(function() end)
+        abbreinder.register_abbr_forgotten(spied_callback)
     end)
 
     after_each(function()
-        ui.output_reminder:revert()
+        spied_callback:revert()
     end)
 
     it('identifies when an abbreviation _was_ expanded', function()
@@ -26,7 +29,7 @@ describe('check_abbrev_remembered', function()
 
         local remembered = abbreinder._check_abbrev_remembered(trigger, value, abbreinder._keylogger)
         assert.are.same(1, remembered)
-        assert.stub(ui.output_reminder).was_not_called()
+        assert.spy(spied_callback).was.Not.called()
     end)
 
     it('identifies when an abbreviation was _not_ expanded', function()
@@ -34,7 +37,7 @@ describe('check_abbrev_remembered', function()
 
         local remembered = abbreinder._check_abbrev_remembered(trigger, value, abbreinder._keylogger)
         assert.are.same(0, remembered)
-        assert.stub(ui.output_reminder).was_called(1)
+        assert.spy(spied_callback).was.called(1)
     end)
 
     it('identifies when something is _not_ a potential abbreviation', function()
@@ -42,7 +45,7 @@ describe('check_abbrev_remembered', function()
 
         local remembered = abbreinder._check_abbrev_remembered(trigger, value, abbreinder._keylogger)
         assert.are.same(-1, remembered)
-        assert.stub(ui.output_reminder).was_not_called()
+        assert.spy(spied_callback).was.Not.called()
     end)
 
     describe('identifies correctly if called twice in a row and', function()

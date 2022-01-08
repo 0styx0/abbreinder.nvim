@@ -17,8 +17,3 @@ set noswapfile
 " moved to using ./test/plenary/integration_manual_tests.lua
 " autocmd InsertCharPre * :lua require('abbreinder')._keylogger = require('abbreinder')._keylogger:sub(1, -2)
 
-lua << EOF
-require'abbreinder'.setup()
-EOF
-
-
