@@ -1,4 +1,6 @@
 
+local ns_name = 'abbrcmd'
+
 -- note: nk = non-keyword (which can expand abbrevations. but can also be part of abbreviation values)
 -- functions exposed for unit tests prefixed with _. else local, or part of `abbreinder`
 local abbreinder = {
@@ -18,12 +20,14 @@ local abbreinder = {
         saved_keylogger = '',
         potential_trigger = '',
     },
-    _should_stop = false,
     _clients = {
         forgotten = {},
         remembered = {},
+        on_change = {},
     },
     _enabled = false,
+    -- [id] = {original_text, tooltip_id}
+    _ext_data = {},
 }
 
 -- @param value - containing at least one non-keyword character
@@ -249,6 +253,74 @@ function abbreinder._get_coordinates(value)
     }
 end
 
+local function set_extmark(abbr_data)
+
+    local ns_id = vim.api.nvim_create_namespace(ns_name)
+
+    local ext_id = vim.api.nvim_buf_set_extmark(0, ns_id, abbr_data.row, abbr_data.col + 1, {
+        end_col = abbr_data.col_end + 1,
+    })
+
+    abbreinder._ext_data[ext_id] = {
+        original_text = abbr_data.value,
+        abbr_data = abbr_data,
+    }
+
+    return ext_id
+end
+
+function abbreinder._monitor_abbrs()
+
+    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+
+    local ns_id = vim.api.nvim_create_namespace(ns_name)
+
+    local marks = vim.api.nvim_buf_get_extmarks(0, ns_id, { row - 1, 0 }, { row + 1, 0 }, { details = true })
+
+    if vim.tbl_isempty(marks) then
+        return
+    end
+
+    for _, value in ipairs(marks) do
+        local ext_id, row, col, details = unpack(value)
+
+        local line = vim.api.nvim_get_current_line()
+        local ext_contents = string.sub(line, col + 1, details.end_col)
+
+        local ext_data = abbreinder._ext_data[ext_id]
+
+        if ext_data.original_text ~= ext_contents then
+            for _, callback in ipairs(abbreinder._clients.on_change[ext_id]) do
+                callback(ext_contents)
+            end
+            vim.api.nvim_buf_del_extmark(0, ns_id, ext_id)
+        end
+    end
+end
+
+local function trigger_callbacks(trigger, value, callbacks)
+
+	local coordinates = abbreinder._get_coordinates(value)
+	local abbr = { trigger = trigger, value = value }
+	local abbr_data = vim.tbl_extend('error', abbr, coordinates)
+
+    local ext_id = set_extmark(abbr_data)
+    abbreinder._clients.on_change[ext_id] = {}
+
+
+	abbr_data.on_change = function(change_callback)
+        table.insert(abbreinder._clients.on_change[ext_id], change_callback)
+	end
+
+    for key, callback in ipairs(callbacks) do
+        local cb_result = callback(abbr_data)
+
+        if cb_result == false then
+            table.remove(callbacks, key)
+        end
+    end
+end
+
 -- @Summary checks if abbreviation functionality was used.
 --   if value was manually typed, notify user
 -- @return {-1, 0, 1} - if no abbreviation found (0), if user typed out the full value
@@ -268,9 +340,8 @@ function abbreinder._check_abbrev_remembered(trigger, value, line_until_cursor)
 
     if abbr_remembered or abbreinder._backspace_data.potential_trigger == trigger or abbr_remembered_midline then
         abbreinder.clear_keylogger()
-        vim.cmd([[doautocmd User AbbreinderAbbrExpanded]])
+        trigger_callbacks(trigger, value, abbreinder._clients.remembered)
         abbreinder._backspace_data.potential_trigger = ''
-
         return 1
     end
 
@@ -281,74 +352,58 @@ function abbreinder._check_abbrev_remembered(trigger, value, line_until_cursor)
 
     if abbr_forgotten and val_in_logger then
         abbreinder.clear_keylogger()
-
-        if #trigger ~= #value then
-
-	        local coordinates = abbreinder._get_coordinates(value)
-	        local abbr = { trigger = trigger, value = value }
-	        local abbr_data = vim.tbl_extend('error', abbr, coordinates)
-
-            for _, callback in ipairs(abbreinder._clients.forgotten) do
-                -- ui.output_reminder(abbreinder, abbr_data)
-                callback(abbr_data)
-            end
-        end
-
+        trigger_callbacks(trigger, value, abbreinder._clients.forgotten)
         return 0
     end
 
     return -1
 end
 
-local function create_ex_commands()
-    vim.cmd([[
-    command! -bang AbbrCmdEnable lua require('abbreinder').enable()
-    command! -bang AbbrCmdDisable lua require('abbreinder').disable()
-    ]])
-end
-
-local function create_autocmds()
-    vim.cmd([[
-    augroup AbbrCmd
-    autocmd!
-    autocmd BufNewFile,BufReadPre * :lua require('abbreinder').clear_keylogger()
-    autocmd BufNewFile,BufReadPre * :lua require('abbreinder').start()
-    augroup END
-    ]])
-end
-
-local function remove_autocmds()
-    vim.cmd([[
-    command! -bang AbbrCmdDisable autocmd! AbbrCmd
-    ]])
-end
-
 function abbreinder.disable()
     -- setting this makes `nvim_buf_attach` return true,
     -- detaching from buffer and clearing keylogger
     -- @see abbreinder.start
-    abbreinder._should_stop = true
-    remove_autocmds()
     abbreinder._enabled = false
 end
 
+local function create_autocmds()
+
+    vim.cmd[[
+    augroup AbbrCmd
+    autocmd!
+    autocmd TextChanged,TextChangedI * :lua require('abbreinder')._monitor_abbrs()
+    augroup END
+    ]]
+end
+
 function abbreinder.enable()
-    abbreinder._should_stop = false
-    create_ex_commands()
-    create_autocmds()
     abbreinder.start()
+    create_autocmds()
     abbreinder._enabled = true
 end
 
--- @param callback: function which will receive {trigger, value, row, col, col_end}
--- as arguments when abbreviation was forgotten
--- TODO: sister function for when remembered
--- TODO: packer load on require module
-function abbreinder.register_abbr_forgotten(callback)
+-- @param callback: function which will receive as arguments:
+-- function({trigger, value, row, col, col_end, on_change})
+--   as arguments when abbreviation was forgotten
+--   on_change will be fired if value is modified later
+-- If callback returns `false` it is unsubscribed from future forgotten events
+function abbreinder.on_abbr_forgotten(callback)
     if not abbreinder._enabled then
         abbreinder.enable()
     end
     table.insert(abbreinder._clients.forgotten, callback)
+end
+
+-- @param callback: function which will receive as arguments:
+-- function({trigger, value, row, col, col_end, on_change})
+--   as arguments when abbreviation was expanded
+--   on_change will be fired if value is modified later
+-- If callback returns `false` it is unsubscribed from future remembered events
+function abbreinder.on_abbr_remembered(callback)
+    if not abbreinder._enabled then
+        abbreinder.enable()
+    end
+    table.insert(abbreinder._clients.remembered, callback)
 end
 
 return abbreinder

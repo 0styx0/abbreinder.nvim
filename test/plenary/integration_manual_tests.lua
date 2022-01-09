@@ -118,14 +118,6 @@ function Abbreinder.tests.expanded_not_reminded(name)
     Write(name, abbr.trigger .. ' ', false)
 end
 
-function Abbreinder.tests.trigger_len_equals_val_len_no_remind(name)
-    -- annoying to be reminded when type correct spelling
-    local abbr = { trigger = 'thier', value = 'their' }
-
-    create_abbreviation(abbr)
-    Write(name, abbr.value .. ' ', false)
-end
-
 function Abbreinder.tests.expanded_midline_not_reminded(name)
     local abbr = abbr_examples.generic[1]
     create_abbreviation(abbr)

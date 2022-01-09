@@ -14,10 +14,11 @@ describe('check_abbrev_remembered', function()
     local spied_callback;
 
     stub(abbreinder, '_get_abbrevs_val_trigger').returns({ [value] = trigger })
+    stub(vim.api, 'nvim_buf_set_extmark').returns('check_abbrev_remembered_spec_stubbed')
 
     before_each(function()
         spied_callback = spy.new(function() end)
-        abbreinder.register_abbr_forgotten(spied_callback)
+        abbreinder.on_abbr_forgotten(spied_callback)
     end)
 
     after_each(function()

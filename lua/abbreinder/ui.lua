@@ -4,7 +4,7 @@ local default_config = require('abbreinder.config')
 local api = vim.api
 local ns_name = 'abbreinder'
 local ui = {
-    -- [id] = {original_text, tooltip_id}
+    -- [id] = {tooltip_id}
     _ext_data = {},
 }
 
@@ -61,9 +61,7 @@ local function highlight_unexpanded_abbr(abbr_data)
         hl_group = ui.config.output.msg.highlight,
     })
 
-    ui._ext_data[ext_id] = {
-        original_text = abbr_data.value,
-    }
+    ui._ext_data[ext_id] = {}
 
     if ui.config.output.msg.highlight_time ~= -1 then
         vim.defer_fn(function()
@@ -74,14 +72,23 @@ local function highlight_unexpanded_abbr(abbr_data)
     return ext_id
 end
 
--- @param abbr {trigger, value, row, col, col_end}
+-- @param abbr {trigger, value, row, col, col_end, on_change}
 local function output_reminder(abbr_data)
+
+    -- case of people using abbreviations to correct typos
+    if #abbr_data.trigger == #abbr_data.value then
+        return
+    end
+
     local msg = ui.config.output.msg.format(abbr_data.trigger, abbr_data.value)
 
     local ext_id = highlight_unexpanded_abbr(abbr_data)
+    abbr_data.on_change(function()
+        ui.close_reminders(ext_id)
+    end)
 
     if ui.config.output.as.tooltip then
-        -- if not deferred, E523 because can't manipulate buffers
+        -- if not scheduled, E523 because can't manipulate buffers
         -- on InsertCharPre
         vim.schedule(function()
             open_tooltip(abbr_data, msg, ext_id)
@@ -93,46 +100,13 @@ local function output_reminder(abbr_data)
     end
 end
 
-function ui.monitor_reminders()
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+function ui.close_reminders(ext_id)
 
+    local ext_data = ui._ext_data[ext_id]
     local ns_id = api.nvim_create_namespace(ns_name)
-
-    local marks = vim.api.nvim_buf_get_extmarks(0, ns_id, { row - 1, 0 }, { row + 1, 0 }, { details = true })
-
-    if vim.tbl_isempty(marks) then
-        return
-    end
-
-    for _, value in ipairs(marks) do
-        local ext_id, row, col, details = unpack(value)
-
-        local line = vim.api.nvim_get_current_line()
-        local ext_contents = string.sub(line, col + 1, details.end_col)
-
-        local ext_data = ui._ext_data[ext_id]
-
-        if ext_data.original_text ~= ext_contents then
-            api.nvim_buf_del_extmark(0, ns_id, ext_id)
-            close_tooltip(ext_data.tooltip_id)
-        end
-    end
-end
-
-local function create_autocmds()
-
-    vim.cmd[[
-    augroup Abbreinder
-    autocmd!
-    autocmd TextChanged,TextChangedI * :lua require('abbreinder.ui').monitor_reminders()
-    augroup END
-    ]]
-end
-
-local function remove_autocmds()
-    vim.cmd([[
-    command! -bang AbbreinderDisable autocmd! Abbreinder
-    ]])
+    -- todo: abstract to function remove highlight??
+    api.nvim_buf_del_extmark(0, ns_id, ext_id)
+    close_tooltip(ext_data.tooltip_id)
 end
 
 local function create_ex_commands()
@@ -144,12 +118,11 @@ end
 
 function ui.enable()
     create_ex_commands()
-    create_autocmds()
-    abbreinder.register_abbr_forgotten(output_reminder)
+    abbreinder.on_abbr_forgotten(output_reminder)
 end
 
 function ui.disable()
-    remove_autocmds()
+    -- unsubscribe from all
 end
 
 -- @Summary Sets up abbreinder
