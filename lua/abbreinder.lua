@@ -128,6 +128,12 @@ local function handle_backspacing(backspace_typed)
     abbreinder._backspace_data.saved_keylogger = ''
 end
 
+-- @return {boolean} if anything is using the plugin
+local function has_subscribers()
+    local clients = abbreinder._clients
+    return vim.tbl_count(clients.forgotten) > 0 or vim.tbl_count(clients.remembered) > 0
+end
+
 function abbreinder.start()
     vim.api.nvim_buf_attach(0, false, {
 
@@ -147,7 +153,9 @@ function abbreinder.start()
             new_end_col,
             new_length
         )
-            if abbreinder._should_stop then
+
+            if not has_subscribers() then
+                abbreinder.disable()
                 return true
             end
 
