@@ -1,3 +1,0 @@
-[submodule "vendor/plenary"]
-	path = vendor/plenary
-	url = https://github.com/nvim-lua/plenary.nvim.git
