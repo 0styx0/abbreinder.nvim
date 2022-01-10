@@ -1,10 +1,8 @@
 local config_defaults = {
-    value = {
-        highlight = {
-            enabled = true,
-            group = 'Special', -- highlight to use
-            time = 4000 -- -1 for permanent
-        },
+    value_highlight = {
+        enabled = true,
+        group = 'Special', -- highlight to use
+        time = 4000 -- -1 for permanent
     },
     tooltip = { -- only takes effect if output_as.tooltip = true
         enabled = true,

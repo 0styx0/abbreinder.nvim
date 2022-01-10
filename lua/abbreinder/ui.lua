@@ -2,12 +2,18 @@ local abbreinder = require('abbreinder')
 local default_config = require('abbreinder.config')
 
 local api = vim.api
-local ns_name = 'abbreinder'
+
 local ui = {
     _abbr_id = 0,
     -- [abbr_id] = {tooltip_id, ext_id}
     _abbr_data = {},
 }
+
+-- @return namespace id
+local function get_namespace()
+    local ns_name = 'abbreinder'
+    return api.nvim_create_namespace(ns_name)
+end
 
 local function close_tooltip(win_id)
     -- nvim_win_is_valid doesn't check if id is nil
@@ -55,29 +61,39 @@ local function open_tooltip(abbr_data, abbr_id)
     end, ui.config.tooltip.time)
 end
 
+local function remove_value_highlight(hl_id)
+    local ns_id = get_namespace()
+    api.nvim_buf_del_extmark(0, ns_id, hl_id)
+end
+
 -- uses extmarks to manage highlights of value based on user-given config
 -- @return ext_id
-local function highlight_unexpanded_abbr(abbr_data, abbr_id)
-    local buf = api.nvim_get_current_buf()
+local function add_value_highlight(abbr_data, abbr_id)
+    local ns_id = get_namespace()
 
-    local ns_id = api.nvim_create_namespace(ns_name)
-
-    local ext_id = api.nvim_buf_set_extmark(buf, ns_id, abbr_data.row, abbr_data.col + 1, {
+    local ext_id = api.nvim_buf_set_extmark(0, ns_id, abbr_data.row, abbr_data.col + 1, {
         end_col = abbr_data.col_end + 1,
-        hl_group = ui.config.value.highlight.group,
+        hl_group = ui.config.value_highlight.group,
     })
 
-    ui._abbr_data[abbr_id].ext_id = ext_id
+    ui._abbr_data[abbr_id].hl_id = ext_id
 
-    if ui.config.value.highlight.time ~= -1 then
+    if ui.config.value_highlight.time ~= -1 then
         vim.defer_fn(function()
             api.nvim_buf_del_extmark(0, ns_id, ext_id)
-        end, ui.config.value.highlight.time)
+        end, ui.config.value_highlight.time)
     end
 end
 
+local function close_reminders(abbr_id)
+
+    local abbr_data = ui._abbr_data[abbr_id]
+    remove_value_highlight(abbr_data.hl_id)
+    close_tooltip(abbr_data.tooltip_id)
+end
+
 -- @param abbr {trigger, value, row, col, col_end, on_change}
-local function output_reminder(abbr_data)
+local function output_reminders(abbr_data)
 
     -- case of people using abbreviations to correct typos
     if #abbr_data.trigger == #abbr_data.value then
@@ -88,13 +104,9 @@ local function output_reminder(abbr_data)
     ui._abbr_id = ui._abbr_id + 1
     ui._abbr_data[abbr_id] = {}
 
-    if ui.config.value.highlight.enabled then
-        highlight_unexpanded_abbr(abbr_data, abbr_id)
+    if ui.config.value_highlight.enabled then
+        add_value_highlight(abbr_data, abbr_id)
     end
-
-    abbr_data.on_change(function()
-        ui.close_reminders(abbr_id)
-    end)
 
     if ui.config.tooltip.enabled then
         -- if not scheduled, E523 because can't manipulate buffers
@@ -103,14 +115,10 @@ local function output_reminder(abbr_data)
             open_tooltip(abbr_data, abbr_id)
         end)
     end
-end
 
-function ui.close_reminders(abbr_id)
-
-    local abbr_data = ui._abbr_data[abbr_id]
-    local ns_id = api.nvim_create_namespace(ns_name)
-    api.nvim_buf_del_extmark(0, ns_id, abbr_data.ext_id)
-    close_tooltip(abbr_data.tooltip_id)
+    abbr_data.on_change(function()
+        close_reminders(abbr_id)
+    end)
 end
 
 local function create_ex_commands()
@@ -120,13 +128,13 @@ local function create_ex_commands()
     ]])
 end
 
-function ui.enable()
-    create_ex_commands()
-    abbreinder.on_abbr_forgotten(output_reminder)
-end
-
 function ui.disable()
     -- unsubscribe from all
+end
+
+function ui.enable()
+    create_ex_commands()
+    abbreinder.on_abbr_forgotten(output_reminders)
 end
 
 -- @Summary Sets up abbreinder
