@@ -1,22 +1,22 @@
 local config_defaults = {
-    output = {
-        as = {
-            echo = false,
-            tooltip = true,
+    value = {
+        highlight = {
+            enabled = true,
+            group = 'Special', -- highlight to use
+            time = 4000 -- -1 for permanent
         },
-        msg = {
-            format = function(key, val) -- format to print reminder in
-                return 'abbrev: "' .. key .. '"->' .. '"' .. val .. '"'
-            end,
-            highlight = 'Special', -- highlight to use
-            -- if want highlight to stop after x ms. -1 for permanent highlight
-            highlight_time = 4000,
+    },
+    tooltip = { -- only takes effect if output_as.tooltip = true
+        enabled = true,
+        time = 4000, -- time before tooltip closes
+        opts = {}, -- see :help nvim_open_win
+        highlight = {
+            enabled = true,
+            group = 'Special', -- highlight to use
         },
-        tooltip = { -- only takes effect if output_as.tooltip = true
-            time_open = 4000, -- time before tooltip closes
-            opts = {}, -- see :help nvim_open_win
-            highlight = 'Special',
-        },
+        format = function(trigger, value) -- format to print reminder in
+            return 'abbrev: "' .. trigger .. '"->' .. '"' .. value .. '"'
+        end,
     },
 }
 

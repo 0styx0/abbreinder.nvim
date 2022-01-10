@@ -4,8 +4,9 @@ local default_config = require('abbreinder.config')
 local api = vim.api
 local ns_name = 'abbreinder'
 local ui = {
-    -- [id] = {tooltip_id}
-    _ext_data = {},
+    _abbr_id = 0,
+    -- [abbr_id] = {tooltip_id, ext_id}
+    _abbr_data = {},
 }
 
 local function close_tooltip(win_id)
@@ -15,9 +16,10 @@ local function close_tooltip(win_id)
     end
 end
 
-local function open_tooltip(abbr_data, text, ext_id)
-    local buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
+local function open_tooltip(abbr_data, abbr_id)
+    local text = ui.config.tooltip.format(abbr_data.trigger, abbr_data.value)
 
+    local buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
     api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
     api.nvim_buf_set_option(buf, 'buflisted', false)
     api.nvim_buf_set_option(buf, 'buftype', 'nofile')
@@ -37,39 +39,41 @@ local function open_tooltip(abbr_data, text, ext_id)
         bufpos = { abbr_data.row, abbr_data.col },
     }
 
-    opts = vim.tbl_extend('force', opts, ui.config.output.tooltip.opts)
+    opts = vim.tbl_extend('force', opts, ui.config.tooltip.opts)
 
     -- and finally create it with buffer attached
     local tooltip_id = api.nvim_open_win(buf, false, opts)
-    api.nvim_buf_add_highlight(buf, -1, ui.config.output.tooltip.highlight, 0, 0, -1)
-    ui._ext_data[ext_id].tooltip_id = tooltip_id
+
+    if ui.config.tooltip.highlight.enabled then
+        api.nvim_buf_add_highlight(buf, -1, ui.config.tooltip.highlight.group, 0, 0, -1)
+    end
+
+    ui._abbr_data[abbr_id].tooltip_id = tooltip_id
 
     vim.defer_fn(function()
         close_tooltip(tooltip_id)
-    end, ui.config.output.tooltip.time_open)
+    end, ui.config.tooltip.time)
 end
 
 -- uses extmarks to manage highlights of value based on user-given config
 -- @return ext_id
-local function highlight_unexpanded_abbr(abbr_data)
+local function highlight_unexpanded_abbr(abbr_data, abbr_id)
     local buf = api.nvim_get_current_buf()
 
     local ns_id = api.nvim_create_namespace(ns_name)
 
     local ext_id = api.nvim_buf_set_extmark(buf, ns_id, abbr_data.row, abbr_data.col + 1, {
         end_col = abbr_data.col_end + 1,
-        hl_group = ui.config.output.msg.highlight,
+        hl_group = ui.config.value.highlight.group,
     })
 
-    ui._ext_data[ext_id] = {}
+    ui._abbr_data[abbr_id].ext_id = ext_id
 
-    if ui.config.output.msg.highlight_time ~= -1 then
+    if ui.config.value.highlight.time ~= -1 then
         vim.defer_fn(function()
             api.nvim_buf_del_extmark(0, ns_id, ext_id)
-        end, ui.config.output.msg.highlight_time)
+        end, ui.config.value.highlight.time)
     end
-
-    return ext_id
 end
 
 -- @param abbr {trigger, value, row, col, col_end, on_change}
@@ -80,33 +84,33 @@ local function output_reminder(abbr_data)
         return
     end
 
-    local msg = ui.config.output.msg.format(abbr_data.trigger, abbr_data.value)
+    local abbr_id = ui._abbr_id
+    ui._abbr_id = ui._abbr_id + 1
+    ui._abbr_data[abbr_id] = {}
 
-    local ext_id = highlight_unexpanded_abbr(abbr_data)
+    if ui.config.value.highlight.enabled then
+        highlight_unexpanded_abbr(abbr_data, abbr_id)
+    end
+
     abbr_data.on_change(function()
-        ui.close_reminders(ext_id)
+        ui.close_reminders(abbr_id)
     end)
 
-    if ui.config.output.as.tooltip then
+    if ui.config.tooltip.enabled then
         -- if not scheduled, E523 because can't manipulate buffers
         -- on InsertCharPre
         vim.schedule(function()
-            open_tooltip(abbr_data, msg, ext_id)
+            open_tooltip(abbr_data, abbr_id)
         end)
-    end
-
-    if ui.config.output.as.echo then
-        api.nvim_echo({ { msg } }, { false }, {})
     end
 end
 
-function ui.close_reminders(ext_id)
+function ui.close_reminders(abbr_id)
 
-    local ext_data = ui._ext_data[ext_id]
+    local abbr_data = ui._abbr_data[abbr_id]
     local ns_id = api.nvim_create_namespace(ns_name)
-    -- todo: abstract to function remove highlight??
-    api.nvim_buf_del_extmark(0, ns_id, ext_id)
-    close_tooltip(ext_data.tooltip_id)
+    api.nvim_buf_del_extmark(0, ns_id, abbr_data.ext_id)
+    close_tooltip(abbr_data.tooltip_id)
 end
 
 local function create_ex_commands()
