@@ -5,8 +5,9 @@ local api = vim.api
 
 local ui = {
     _abbr_id = 0,
-    -- [abbr_id] = {tooltip_id, ext_id}
+    -- [abbr_id] = {tooltip_id, hl_id}
     _abbr_data = {},
+    _enabled = false,
 }
 
 -- @return namespace id
@@ -95,6 +96,11 @@ end
 -- @param abbr {trigger, value, row, col, col_end, on_change}
 local function output_reminders(abbr_data)
 
+    if not ui._enabled then
+        -- false = unsubscribe
+        return false
+    end
+
     -- case of people using abbreviations to correct typos
     if #abbr_data.trigger == #abbr_data.value then
         return
@@ -129,10 +135,11 @@ local function create_ex_commands()
 end
 
 function ui.disable()
-    -- unsubscribe from all
+    ui._enabled = false
 end
 
 function ui.enable()
+    ui._enabled = true
     create_ex_commands()
     abbreinder.on_abbr_forgotten(output_reminders)
 end
