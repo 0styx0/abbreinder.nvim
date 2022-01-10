@@ -1,4 +1,4 @@
-local abbrcmd = require('abbrcmd.abbrcmd')
+local abbremand = require('abbremand')
 local default_config = require('config')
 
 local api = vim.api
@@ -141,7 +141,7 @@ end
 function abbreinder.enable()
     abbreinder._enabled = true
     create_ex_commands()
-    abbrcmd.on_abbr_forgotten(output_reminders)
+    abbremand.on_abbr_forgotten(output_reminders)
 end
 
 -- @Summary Sets up abbreinder
