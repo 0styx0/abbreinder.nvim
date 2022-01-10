@@ -1,417 +1,157 @@
+local abbrcmd = require('abbrcmd.abbrcmd')
+local default_config = require('config')
 
-local ns_name = 'abbrcmd'
+local api = vim.api
 
--- note: nk = non-keyword (which can expand abbrevations. but can also be part of abbreviation values)
--- functions exposed for unit tests prefixed with _. else local, or part of `abbreinder`
 local abbreinder = {
-    _cache = {
-        -- to check if must update the maps
-        abbrevs = '',
-        -- tracks all values containing keyword chars, to be treated differently
-        -- [last_chunk_of_value] = {full_val_i}
-        last_chunk_to_full_values = {},
-        -- tracks all abbreviations
-        -- [full_value] = trigger
-        value_to_trigger = {},
-    },
-    _keylogger = '',
-    _backspace_data = {
-        consecutive_backspaces = 0,
-        saved_keylogger = '',
-        potential_trigger = '',
-    },
-    _clients = {
-        forgotten = {},
-        remembered = {},
-        on_change = {},
-    },
+    _abbr_id = 0,
+    -- [abbr_id] = {tooltip_id, hl_id}
+    _abbr_data = {},
     _enabled = false,
-    -- [id] = {original_text, tooltip_id}
-    _ext_data = {},
 }
 
--- @param value - containing at least one non-keyword character
--- @return updated last_chunk_to_full_values
-local function add_nk_containing_abbr(map_nk_val, value)
-    local val_after_non_keyword_pat = vim.regex('[[:keyword:]]\\+$')
-    local val_after_nk_start, val_after_nk_end = val_after_non_keyword_pat:match_str(value)
-
-    local val_is_only_one_char_and_is_nk_keyword = not val_after_nk_start
-    if val_is_only_one_char_and_is_nk_keyword then
-        -- must be {} because last chunk could be common
-        if not map_nk_val[''] then
-            map_nk_val[''] = {}
-        end
-        table.insert(map_nk_val[''], value)
-
-        return map_nk_val
-    end
-
-    val_after_nk_start = val_after_nk_start + 1
-
-    local val_after_nk = value:sub(val_after_nk_start, val_after_nk_end)
-
-    if not map_nk_val[val_after_nk] then
-        map_nk_val[val_after_nk] = {}
-    end
-    table.insert(map_nk_val[val_after_nk], value)
-
-    return map_nk_val
+-- @return namespace id
+local function get_namespace()
+    local ns_name = 'abbreinder'
+    return api.nvim_create_namespace(ns_name)
 end
 
--- @Summary Parses neovim's list of abbrevations into a map
--- Caches results, so only runs if new iabbrevs are added during session
--- @return {[trigger] = value} and {[last_word_of_value_containing_keyword] = {full_values}}
-function abbreinder._create_abbrev_maps()
-    local abbrevs = vim.api.nvim_exec('iabbrev', true) .. '\n' -- the \n is important for regex
-
-    if abbreinder._cache.abbrevs == abbrevs then
-        return abbreinder._cache.value_to_trigger, abbreinder._cache.last_chunk_to_full_values
+local function close_tooltip(win_id)
+    -- nvim_win_is_valid doesn't check if id is nil
+    if win_id ~= nil and api.nvim_win_is_valid(win_id) then
+        api.nvim_win_close(win_id, true)
     end
-    abbreinder._cache.abbrevs = abbrevs
-
-    local cur_val_to_trig = {}
-    local cur_lchunk_to_vals = {}
-
-    for trigger, value in abbrevs:gmatch('i%s%s(.-)%s%s*(.-)\n') do
-        -- support for plugins such as vim-abolish, which adds prefix
-        -- see :help map /can appear
-        value = string.gsub(value, '^[*&@]+', '')
-
-        local value_contains_non_keyword_pat = vim.regex('[^[:keyword:]]')
-        local value_contains_non_keyword = value_contains_non_keyword_pat:match_str(value)
-        if value_contains_non_keyword then
-            cur_lchunk_to_vals = add_nk_containing_abbr(cur_lchunk_to_vals, value)
-        end
-
-        cur_val_to_trig[value] = trigger
-    end
-
-    abbreinder._cache.value_to_trigger = cur_val_to_trig
-    abbreinder._cache.last_chunk_to_full_values = cur_lchunk_to_vals
-
-    return cur_val_to_trig, cur_lchunk_to_vals
 end
 
-function abbreinder.clear_keylogger()
-    -- doing this on bufread fixes bug where characters C> are part of keylogger string
-    abbreinder._keylogger = ''
-end
+local function open_tooltip(abbr_data, abbr_id)
+    local text = abbreinder.config.tooltip.format(abbr_data.trigger, abbr_data.value)
 
--- @Summary tracks backspacing. more complex than logic might initially seem
---   because on abbreviation expansion, vim backspaces the trigger.
---   so must differentiate between user vs expansion backspacing
-local function handle_backspacing(backspace_typed)
-    if backspace_typed then
-        if abbreinder._backspace_data.consecutive_backspaces == 0 then
-            abbreinder._backspace_data.saved_keylogger = abbreinder._keylogger
-            abbreinder._backspace_data.potential_trigger = ''
-        end
+    local buf = api.nvim_create_buf(false, true) -- create new emtpy buffer
+    api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
+    api.nvim_buf_set_option(buf, 'buflisted', false)
+    api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+    api.nvim_buf_set_lines(buf, 0, -1, true, { text })
+    api.nvim_buf_set_option(buf, 'modifiable', false)
+    api.nvim_buf_set_keymap(buf, 'n', 'q', ':close<CR>', { silent = true, nowait = true, noremap = true })
 
-        abbreinder._keylogger = abbreinder._keylogger:sub(1, -2)
-        abbreinder._backspace_data.consecutive_backspaces = abbreinder._backspace_data.consecutive_backspaces + 1
-        return
+    -- set some options
+    local opts = {
+        style = 'minimal',
+        relative = 'win',
+        anchor = 'SW',
+        width = #text,
+        height = 1,
+        focusable = false,
+        noautocmd = true,
+        bufpos = { abbr_data.row, abbr_data.col },
+    }
+
+    opts = vim.tbl_extend('force', opts, abbreinder.config.tooltip.opts)
+
+    -- and finally create it with buffer attached
+    local tooltip_id = api.nvim_open_win(buf, false, opts)
+
+    if abbreinder.config.tooltip.highlight.enabled then
+        api.nvim_buf_add_highlight(buf, -1, abbreinder.config.tooltip.highlight.group, 0, 0, -1)
     end
 
-    if abbreinder._backspace_data.consecutive_backspaces == 0 then
-        return
-    end
+    abbreinder._abbr_data[abbr_id].tooltip_id = tooltip_id
 
-    -- when abbr expanded, it deletes the trigger
-    -- so later in @see check_abbrev_remembered, compare with actual trigger
-    abbreinder._backspace_data.potential_trigger = string.sub(
-        abbreinder._backspace_data.saved_keylogger,
-        #abbreinder._backspace_data.saved_keylogger - abbreinder._backspace_data.consecutive_backspaces + 1
-    )
-
-    abbreinder._backspace_data.consecutive_backspaces = 0
-    abbreinder._backspace_data.saved_keylogger = ''
+    vim.defer_fn(function()
+        close_tooltip(tooltip_id)
+    end, abbreinder.config.tooltip.time)
 end
 
--- @return {boolean} if anything is using the plugin
-local function has_subscribers()
-    local clients = abbreinder._clients
-    return vim.tbl_count(clients.forgotten) > 0 or vim.tbl_count(clients.remembered) > 0
+local function remove_value_highlight(hl_id)
+    local ns_id = get_namespace()
+    api.nvim_buf_del_extmark(0, ns_id, hl_id)
 end
 
-function abbreinder.start()
-    vim.api.nvim_buf_attach(0, false, {
+-- uses extmarks to manage highlights of value based on user-given config
+-- @return ext_id
+local function add_value_highlight(abbr_data, abbr_id)
+    local ns_id = get_namespace()
 
-        on_detach = abbreinder.clear_keylogger,
-
-        on_bytes = function(
-            byte_str,
-            buf,
-            changed_tick,
-            start_row,
-            start_col,
-            byte_offset,
-            old_end_row,
-            old_end_col,
-            old_length,
-            new_end_row,
-            new_end_col,
-            new_length
-        )
-
-            if not has_subscribers() then
-                abbreinder.disable()
-                return true
-            end
-
-            -- if don't have this, then the nvim_buf_get_lines will throw out of bounds error
-            -- even if not actually accessing an index of it, even though start_row is a valid index
-            if vim.api.nvim_get_mode().mode ~= 'i' then
-                -- allows for reminders to take into account normal mode changes
-                -- using nvim_get_current_line gives out of bounds error for some reason
-                abbreinder._keylogger = vim.fn.getline('.')
-                return false
-            end
-
-            local line = vim.api.nvim_buf_get_lines(0, start_row, start_row + 1, true)[1]
-
-            local cur_char = line:sub(start_col + 1, start_col + 1)
-            abbreinder._keylogger = abbreinder._keylogger .. cur_char
-
-            local cursor_col = start_col + new_end_col
-            local line_until_cursor = line:sub(0, cursor_col)
-
-            local user_backspaced = cur_char == ''
-                and new_end_col == old_end_col - 1
-                and new_end_row == old_end_row
-                and new_length == 0
-
-            if user_backspaced then
-                handle_backspacing(true)
-            else
-                abbreinder._find_abbrev(cur_char, line_until_cursor)
-                handle_backspacing(false)
-            end
-        end,
+    local ext_id = api.nvim_buf_set_extmark(0, ns_id, abbr_data.row, abbr_data.col + 1, {
+        end_col = abbr_data.col_end + 1,
+        hl_group = abbreinder.config.value_highlight.group,
     })
+
+    abbreinder._abbr_data[abbr_id].hl_id = ext_id
+
+    if abbreinder.config.value_highlight.time ~= -1 then
+        vim.defer_fn(function()
+            api.nvim_buf_del_extmark(0, ns_id, ext_id)
+        end, abbreinder.config.value_highlight.time)
+    end
 end
 
--- @return value if val_after_nk points to abbr value, else false
-function abbreinder._contains_nk_abbr(text, val_after_nk)
-    if not abbreinder._cache.last_chunk_to_full_values[val_after_nk] then
+local function close_reminders(abbr_id)
+
+    local abbr_data = abbreinder._abbr_data[abbr_id]
+    remove_value_highlight(abbr_data.hl_id)
+    close_tooltip(abbr_data.tooltip_id)
+end
+
+-- @param abbr {trigger, value, row, col, col_end, on_change}
+local function output_reminders(abbr_data)
+
+    if not abbreinder._enabled then
+        -- false = unsubscribe
         return false
     end
 
-    local potential_values = abbreinder._cache.last_chunk_to_full_values[val_after_nk]
-
-    for _, value in ipairs(potential_values) do
-        if abbreinder._cache.value_to_trigger[value] and string.find(text, value, #text - #value, true) then
-            return value
-        end
-    end
-
-    return false
-end
-
--- @Summary searches through what has been typed since the user last typed
--- an abbreviation-expanding character, to see if an abbreviation has been used
--- @return trigger, value. or -1 if not found
-function abbreinder._find_abbrev(cur_char, line_until_cursor)
-    local keyword_regex = vim.regex('[[:keyword:]]')
-    local not_trigger_char = keyword_regex:match_str(cur_char)
-
-    if not_trigger_char then
-        return -1
-    end
-
-    local value_regex = vim.regex('[[:keyword:]]\\+[^[:keyword:]]\\+$')
-    local val_start, val_end = value_regex:match_str(line_until_cursor)
-    if not val_start then
-        return -1
-    end
-
-    val_start = val_start + 1
-    val_end = val_end - 1
-    local potential_value = line_until_cursor:sub(val_start, val_end)
-
-    local value_to_trigger = abbreinder._create_abbrev_maps()
-    local potential_trigger = value_to_trigger[potential_value]
-
-    -- potential_value only contains characters after last non-keyword char
-    local nk_value = abbreinder._contains_nk_abbr(line_until_cursor, potential_value)
-    if nk_value then
-        local nk_trigger = value_to_trigger[nk_value]
-        abbreinder._check_abbrev_remembered(nk_trigger, nk_value, line_until_cursor)
-        return nk_trigger, nk_value
-    elseif potential_trigger then
-        abbreinder._check_abbrev_remembered(potential_trigger, potential_value, line_until_cursor)
-        return potential_trigger, potential_value
-    end
-
-    return -1
-end
-
--- @return zero indexed {row, col, col_end} of value. assumes value ends at cursor pos
-function abbreinder._get_coordinates(value)
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-
-    local line_num = row - 1
-    local value_start = col - #value - 1
-    local value_end = col - 1
-
-    return {
-	    row = line_num,
-	    col = value_start,
-	    col_end = value_end
-    }
-end
-
-local function set_extmark(abbr_data)
-
-    local ns_id = vim.api.nvim_create_namespace(ns_name)
-
-    local ext_id = vim.api.nvim_buf_set_extmark(0, ns_id, abbr_data.row, abbr_data.col + 1, {
-        end_col = abbr_data.col_end + 1,
-    })
-
-    abbreinder._ext_data[ext_id] = {
-        original_text = abbr_data.value,
-        abbr_data = abbr_data,
-    }
-
-    return ext_id
-end
-
-function abbreinder._monitor_abbrs()
-
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-
-    local ns_id = vim.api.nvim_create_namespace(ns_name)
-
-    local marks = vim.api.nvim_buf_get_extmarks(0, ns_id, { row - 1, 0 }, { row + 1, 0 }, { details = true })
-
-    if vim.tbl_isempty(marks) then
+    -- case of people using abbreviations to correct typos
+    if #abbr_data.trigger == #abbr_data.value then
         return
     end
 
-    for _, value in ipairs(marks) do
-        local ext_id, row, col, details = unpack(value)
+    local abbr_id = abbreinder._abbr_id
+    abbreinder._abbr_id = abbreinder._abbr_id + 1
+    abbreinder._abbr_data[abbr_id] = {}
 
-        local line = vim.api.nvim_get_current_line()
-        local ext_contents = string.sub(line, col + 1, details.end_col)
-
-        local ext_data = abbreinder._ext_data[ext_id]
-
-        if ext_data.original_text ~= ext_contents then
-            for _, callback in ipairs(abbreinder._clients.on_change[ext_id]) do
-                callback(ext_contents)
-            end
-            vim.api.nvim_buf_del_extmark(0, ns_id, ext_id)
-        end
+    if abbreinder.config.value_highlight.enabled then
+        add_value_highlight(abbr_data, abbr_id)
     end
+
+    if abbreinder.config.tooltip.enabled then
+        -- if not scheduled, E523 because can't manipulate buffers
+        -- on InsertCharPre
+        vim.schedule(function()
+            open_tooltip(abbr_data, abbr_id)
+        end)
+    end
+
+    abbr_data.on_change(function()
+        close_reminders(abbr_id)
+    end)
 end
 
-local function trigger_callbacks(trigger, value, callbacks)
-
-	local coordinates = abbreinder._get_coordinates(value)
-	local abbr = { trigger = trigger, value = value }
-	local abbr_data = vim.tbl_extend('error', abbr, coordinates)
-
-    local ext_id = set_extmark(abbr_data)
-    abbreinder._clients.on_change[ext_id] = {}
-
-
-	abbr_data.on_change = function(change_callback)
-        table.insert(abbreinder._clients.on_change[ext_id], change_callback)
-	end
-
-    for key, callback in ipairs(callbacks) do
-        local cb_result = callback(abbr_data)
-
-        if cb_result == false then
-            table.remove(callbacks, key)
-        end
-    end
-end
-
--- @Summary checks if abbreviation functionality was used.
---   if value was manually typed, notify user
--- @return {-1, 0, 1} - if no abbreviation found (0), if user typed out the full value
---   instead of using trigger (0), if it was triggered properly (1)
-function abbreinder._check_abbrev_remembered(trigger, value, line_until_cursor)
-    local value_trigger = abbreinder._create_abbrev_maps()
-    local abbr_exists = value_trigger[value] == trigger
-    if not abbr_exists then
-        return -1
-    end
-
-    local expanded_pat = vim.regex(trigger .. '[^[:keyword:]]' .. value)
-    local abbr_remembered = expanded_pat:match_str(abbreinder._keylogger)
-
-    local expanded_midline_pat = vim.regex(trigger .. '[[:keyword:]]\\{' .. #trigger .. '}' .. value)
-    local abbr_remembered_midline = expanded_midline_pat:match_str(abbreinder._keylogger)
-
-    if abbr_remembered or abbreinder._backspace_data.potential_trigger == trigger or abbr_remembered_midline then
-        abbreinder.clear_keylogger()
-        trigger_callbacks(trigger, value, abbreinder._clients.remembered)
-        abbreinder._backspace_data.potential_trigger = ''
-        return 1
-    end
-
-    local forgotten_pat = vim.regex(value .. '[^[:keyword:]]')
-    local abbr_forgotten = forgotten_pat:match_str(line_until_cursor)
-
-    local val_in_logger = string.find(abbreinder._keylogger, value, 1, true)
-
-    if abbr_forgotten and val_in_logger then
-        abbreinder.clear_keylogger()
-        trigger_callbacks(trigger, value, abbreinder._clients.forgotten)
-        return 0
-    end
-
-    return -1
+local function create_ex_commands()
+    vim.cmd([[
+    command! -bang AbbreinderEnable lua require('abbreinder').enable()
+    command! -bang AbbreinderDisable lua require('abbreinder').disable()
+    ]])
 end
 
 function abbreinder.disable()
-    -- setting this makes `nvim_buf_attach` return true,
-    -- detaching from buffer and clearing keylogger
-    -- @see abbreinder.start
     abbreinder._enabled = false
 end
 
-local function create_autocmds()
-
-    vim.cmd[[
-    augroup AbbrCmd
-    autocmd!
-    autocmd TextChanged,TextChangedI * :lua require('abbreinder')._monitor_abbrs()
-    augroup END
-    ]]
-end
-
 function abbreinder.enable()
-    abbreinder.start()
-    create_autocmds()
     abbreinder._enabled = true
+    create_ex_commands()
+    abbrcmd.on_abbr_forgotten(output_reminders)
 end
 
--- @param callback: function which will receive as arguments:
--- function({trigger, value, row, col, col_end, on_change})
---   as arguments when abbreviation was forgotten
---   on_change will be fired if value is modified later
--- If callback returns `false` it is unsubscribed from future forgotten events
-function abbreinder.on_abbr_forgotten(callback)
-    if not abbreinder._enabled then
-        abbreinder.enable()
-    end
-    table.insert(abbreinder._clients.forgotten, callback)
-end
+-- @Summary Sets up abbreinder
+-- @Description launch abbreinder with specified config (falling back to defaults from ./abbreinder/config.lua)
+-- @Param config(table) - user specified config
+function abbreinder.setup(user_config)
+    user_config = user_config or {}
 
--- @param callback: function which will receive as arguments:
--- function({trigger, value, row, col, col_end, on_change})
---   as arguments when abbreviation was expanded
---   on_change will be fired if value is modified later
--- If callback returns `false` it is unsubscribed from future remembered events
-function abbreinder.on_abbr_remembered(callback)
-    if not abbreinder._enabled then
-        abbreinder.enable()
-    end
-    table.insert(abbreinder._clients.remembered, callback)
+    abbreinder.config = vim.tbl_deep_extend('force', default_config, user_config)
+    abbreinder.enable()
 end
 
 return abbreinder

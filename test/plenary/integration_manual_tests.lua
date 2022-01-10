@@ -1,12 +1,14 @@
 -- so can look at output
 local config = require('abbreinder.config')
+local abbreinder = require('abbreinder')
+
 config.output.msg.highlight_time = -1
 
 local abbr_examples = {
     generic = {
         [1] = {
             trigger = 'req',
-            value = 'requirer',
+            value = 'require',
         },
         [2] = {
             trigger = 'shep',
@@ -64,6 +66,18 @@ end
 function Write(test_name, str, want_reminder)
     local description = '### ' .. test_name
 
+    local forgotten_callback = function(abbr_data)
+        print(vim.inspect(abbr_data))
+        vim.api.nvim_buf_add_highlight(0, -1, 'Special', abbr_data.row, abbr_data.col + 1, abbr_data.col_end - 1)
+        return false
+    end
+    local remembered_callback = function(abbr_data)
+        vim.api.nvim_buf_add_highlight(0, -1, 'DiffText', abbr_data.row, abbr_data.col + 1, abbr_data.col_end + 1)
+        return false
+    end
+    abbreinder.on_abbr_forgotten(forgotten_callback)
+    abbreinder.on_abbr_remembered(remembered_callback)
+
     local expected = 'expected: '
     if want_reminder then
         expected = expected .. 'YES reminder'
@@ -75,7 +89,7 @@ function Write(test_name, str, want_reminder)
     vim.api.nvim_feedkeys('a\n' .. expected, 'xn', true)
 
     local escaped = vim.api.nvim_replace_termcodes(str, true, true, true)
-    vim.api.nvim_feedkeys('a\n' .. escaped, 't', true)
+    vim.api.nvim_feedkeys('a\n' .. escaped, 'tx', true)
 
     local ending = vim.api.nvim_replace_termcodes('<Esc>o' .. '\n\n', true, true, true)
     vim.api.nvim_feedkeys(ending, 'tn', true)
@@ -143,14 +157,15 @@ function Abbreinder.tests.nonexistent_abbr_no_remind(name)
 end
 
 function Abbreinder.tests.does_nothing_on_normal_mode(name)
-    Write(name, '<Esc>dd', false)
+    Write(name, '<Esc>dd', nil)
 end
 
 function Run_tests()
-    vim.cmd('edit test/plenary/integration_test_output.md')
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
+    -- vim.cmd('edit test/plenary/integration_test_output.md')
+    -- vim.api.nvim_buf_set_lines(0, 0, -1, false, {})
 
     for key, value in pairs(Abbreinder.tests) do
         Abbreinder.tests[key](key)
     end
 end
+

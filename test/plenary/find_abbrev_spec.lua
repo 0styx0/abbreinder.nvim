@@ -1,5 +1,5 @@
 local assert = require('luassert.assert')
-local abbreinder = require('abbreinder')
+local abbrcmd = require('abbrcmd.abbrcmd')
 local spy = require('luassert.spy')
 local stub = require('luassert.stub')
 local helpers = require('test.plenary.helpers')
@@ -9,15 +9,15 @@ describe('_find_abbrev', function()
     local keyword, non_keyword = helpers.set_keyword()
 
     -- unit test, don't rely on other functionality
-    stub(abbreinder, '_check_abbrev_remembered').returns(nil)
+    stub(abbrcmd, '_check_abbrev_remembered').returns(nil)
 
     it('short circuits if abbreviation not possible', function()
         -- _create just happens to be a method used in _find_abbrev
-        local spied_create = spy.on(abbreinder, '_create_abbrev_maps')
-        abbreinder._find_abbrev(keyword, abbreinder._keylogger)
+        local spied_create = spy.on(abbrcmd, '_create_abbrev_maps')
+        abbrcmd._find_abbrev(keyword, abbrcmd._keylogger)
 
         assert.spy(spied_create).was_not_called()
-        abbreinder._create_abbrev_maps:revert()
+        abbrcmd._create_abbrev_maps:revert()
     end)
 
     -- the next three tests handle abbreviations formatted
@@ -28,8 +28,8 @@ describe('_find_abbrev', function()
 
         helpers.create_abbr({}, trigger, value)
 
-        abbreinder._keylogger = 'random text ' .. value .. non_keyword
-        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
+        abbrcmd._keylogger = 'random text ' .. value .. non_keyword
+        local actual_trigger, actual_value = abbrcmd._find_abbrev(non_keyword, abbrcmd._keylogger)
 
         assert.are.same(trigger, actual_trigger)
         assert.are.same(value, actual_value)
@@ -41,8 +41,8 @@ describe('_find_abbrev', function()
 
         helpers.create_abbr({}, trigger, value)
 
-        abbreinder._keylogger = 'random text ' .. value .. non_keyword
-        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
+        abbrcmd._keylogger = 'random text ' .. value .. non_keyword
+        local actual_trigger, actual_value = abbrcmd._find_abbrev(non_keyword, abbrcmd._keylogger)
 
         assert.are.same(trigger, actual_trigger)
         assert.are.same(value, actual_value)
@@ -54,8 +54,8 @@ describe('_find_abbrev', function()
 
         helpers.create_abbr({}, trigger, value)
 
-        abbreinder._keylogger = 'random text ' .. value .. non_keyword
-        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
+        abbrcmd._keylogger = 'random text ' .. value .. non_keyword
+        local actual_trigger, actual_value = abbrcmd._find_abbrev(non_keyword, abbrcmd._keylogger)
 
         assert.are.same(trigger, actual_trigger)
         assert.are.same(value, actual_value)
@@ -67,8 +67,8 @@ describe('_find_abbrev', function()
 
         helpers.create_abbr({}, trigger, value)
 
-        abbreinder._keylogger = 'random text ' .. value .. non_keyword
-        local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
+        abbrcmd._keylogger = 'random text ' .. value .. non_keyword
+        local actual_trigger, actual_value = abbrcmd._find_abbrev(non_keyword, abbrcmd._keylogger)
 
         assert.are.same(trigger, actual_trigger)
         assert.are.same(value, actual_value)
@@ -78,8 +78,8 @@ describe('_find_abbrev', function()
         it('accounts for ' .. category .. ' word abbrs', function()
             helpers.create_abbr({}, abbr.trigger, abbr.value)
 
-            abbreinder._keylogger = 'random text ' .. abbr.value .. non_keyword
-            local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
+            abbrcmd._keylogger = 'random text ' .. abbr.value .. non_keyword
+            local actual_trigger, actual_value = abbrcmd._find_abbrev(non_keyword, abbrcmd._keylogger)
 
             assert.are.same(abbr.trigger, actual_trigger)
             assert.are.same(abbr.value, actual_value)
@@ -87,14 +87,14 @@ describe('_find_abbrev', function()
     end)
 
     it('uses most recently typed abbr, if multiple typed', function()
-        abbreinder._keylogger = ''
+        abbrcmd._keylogger = ''
 
         for i = 1, 2, 1 do
             local abbr = helpers.abbrs.generic[i]
             helpers.create_abbr({}, abbr.trigger, abbr.value)
 
-            abbreinder._keylogger = abbreinder._keylogger .. ' random text ' .. abbr.value .. non_keyword
-            local actual_trigger, actual_value = abbreinder._find_abbrev(non_keyword, abbreinder._keylogger)
+            abbrcmd._keylogger = abbrcmd._keylogger .. ' random text ' .. abbr.value .. non_keyword
+            local actual_trigger, actual_value = abbrcmd._find_abbrev(non_keyword, abbrcmd._keylogger)
 
             assert.are.same(abbr.trigger, actual_trigger, i .. 'th abbrev')
             assert.are.same(abbr.value, actual_value)
