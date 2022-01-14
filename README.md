@@ -22,8 +22,8 @@ This dilemma especially comes up when I create abbreviations using Tim Pope's [v
 ### Installation
 
 #### Packer:
-```lua
 
+```lua
 use {
     '0styx0/abbreinder.nvim',
     requires = {
@@ -36,34 +36,33 @@ use {
         -- retaining the default values
         require'abbreinder'.setup(<config>)
     end,
+    event = 'BufRead', -- if want lazy load
 }
 ```
 
 ----
 
 ##### Config
+
 ```lua
 local config_defaults = {
-    output = {
-        as = {
-            echo = false,
-            tooltip = true,
+    value_highlight = {
+        enabled = true,
+        group = 'Special', -- highlight to use
+        time = 4000 -- -1 for permanent
+    },
+    tooltip = { -- only takes effect if output_as.tooltip = true
+        enabled = true,
+        time = 4000, -- time before tooltip closes
+        opts = {}, -- see :help nvim_open_win
+        highlight = {
+            enabled = true,
+            group = 'Special', -- highlight to use
         },
-        msg = {
-            format = function(key, val) -- format to print reminder in
-                return 'abbrev: "' .. key .. '"->' .. '"' .. val .. '"'
-            end,
-            highlight = 'Special', -- highlight to use
-            -- if want highlight to stop after x ms. -1 for permanent highlight
-            highlight_time = 4000,
-        },
-        tooltip = { -- only takes effect if output_as.tooltip = true
-            time_open = 4000, -- time before tooltip closes
-            opts = {}, -- see :help nvim_open_win
-            highlight = 'Special',
-        },
-    }
-}
+        format = function(trigger, value) -- format to print reminder in
+            return 'abbrev: "' .. trigger .. '"->' .. '"' .. value .. '"'
+        end,
+    },
 }
 ```
 While the config here will most likely be kept up to date, feel free to check out [./lua/abbreinder/config.lua](./lua/abbreinder/config.lua) for the actual version.
