@@ -99,7 +99,6 @@ local function output_reminders(abbr_data)
 
     local buf = vim.api.nvim_get_current_buf()
     if not abbreinder._enabled[buf] then
-        print('not enabled')
         -- false = unsubscribe
         return false
     end
