@@ -90,8 +90,21 @@ end
 local function close_reminders(abbr_id)
 
     local abbr_data = abbreinder.abbr_data[abbr_id]
+
+    if not abbr_data then
+        return
+    end
+
     remove_value_highlight(abbr_data.hl_id)
     close_tooltip(abbr_data.tooltip_id)
+
+    abbreinder.abbr_data[abbr_id] = nil
+end
+
+local function close_all_reminders()
+    for abbr_id in pairs(abbreinder.abbr_data) do
+        close_reminders(abbr_id)
+    end
 end
 
 -- @param abbr {trigger, value, row, col, col_end, on_change}
@@ -140,6 +153,7 @@ local function create_autocmds()
     augroup Abbreinder
     autocmd!
     autocmd BufNewFile,BufReadPre * :lua require('abbreinder').enable()
+    autocmd BufLeave * :lua require('abbreinder').close_all_reminders()
     augroup END
     ]]
 end
@@ -155,6 +169,7 @@ local function disable()
     local buf = vim.api.nvim_get_current_buf()
     abbreinder.enabled[buf] = false
     remove_autocmds()
+    close_all_reminders()
 end
 
 local function enable()
@@ -166,7 +181,7 @@ local function enable()
 end
 
 -- @Summary Sets up abbreinder
--- @Description launch abbreinder with specified config (falling back to defaults from ./abbreinder/config.lua)
+-- @Description launch abbreinder with specified config (falling back to defaults from ./config.lua)
 -- @Param config(table) - user specified config
 local function setup(user_config)
     user_config = user_config or {}
@@ -179,4 +194,5 @@ return {
     enable = enable,
     disable = disable,
     setup = setup,
+    close_all_reminders = close_all_reminders,
 }
