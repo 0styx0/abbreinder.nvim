@@ -65,16 +65,17 @@ local config_defaults = {
     },
 }
 ```
-While the config here will most likely be kept up to date, feel free to check out [./lua/abbreinder/config.lua](./lua/abbreinder/config.lua) for the actual version.
+While the config here will most likely be kept up to date, feel free to check out [./lua/config.lua](./lua/config.lua) for the actual version.
 
 ---
 
 ### Commands
+
+#### Vim
 + `:AbbreinderEnable`
 + `:AbbreinderDisable`
 
----
-
-### Exports
-Todo: Create subscription function ([#11](https://github.com/0styx0/abbreinder.nvim/issues/11#issue-1088460034))
+#### Lua
++ `require('abbreinder').enable()`
++ `require('abbreinder').disable()`
 
