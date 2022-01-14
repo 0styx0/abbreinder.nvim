@@ -23,13 +23,20 @@ This dilemma especially comes up when I create abbreviations using Tim Pope's [v
 
 #### Packer:
 ```lua
-  use {
+
+use {
     '0styx0/abbreinder.nvim',
-    -- <config> can be empty to stay with defaults
-    -- or anything can be changed, with anything unspecified
-    -- retaining the default values
-    config = function() require'abbreinder'.setup(<config>) end
-  }
+    requires = {
+        '0styx0/abbremand.nvim',
+        module = 'abbremand' -- if want to lazy load
+    },
+    config = function()
+        -- <config> can be empty to stay with defaults
+        -- or anything can be changed, with anything unspecified
+        -- retaining the default values
+        require'abbreinder'.setup(<config>)
+    end,
+}
 ```
 
 ----
