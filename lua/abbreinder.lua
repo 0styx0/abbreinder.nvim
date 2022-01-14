@@ -4,11 +4,11 @@ local default_config = require('config')
 local api = vim.api
 
 local abbreinder = {
-    _abbr_id = 0,
+    next_abbr_id = 0,
     -- [abbr_id] = {tooltip_id, hl_id}
-    _abbr_data = {},
+    abbr_data = {},
     -- [buf_num] = bool
-    _enabled = {},
+    enabled = {},
 }
 
 -- @return namespace id
@@ -56,7 +56,7 @@ local function open_tooltip(abbr_data, abbr_id)
         api.nvim_buf_add_highlight(buf, -1, abbreinder.config.tooltip.highlight.group, 0, 0, -1)
     end
 
-    abbreinder._abbr_data[abbr_id].tooltip_id = tooltip_id
+    abbreinder.abbr_data[abbr_id].tooltip_id = tooltip_id
 
     vim.defer_fn(function()
         close_tooltip(tooltip_id)
@@ -78,7 +78,7 @@ local function add_value_highlight(abbr_data, abbr_id)
         hl_group = abbreinder.config.value_highlight.group,
     })
 
-    abbreinder._abbr_data[abbr_id].hl_id = ext_id
+    abbreinder.abbr_data[abbr_id].hl_id = ext_id
 
     if abbreinder.config.value_highlight.time ~= -1 then
         vim.defer_fn(function()
@@ -89,7 +89,7 @@ end
 
 local function close_reminders(abbr_id)
 
-    local abbr_data = abbreinder._abbr_data[abbr_id]
+    local abbr_data = abbreinder.abbr_data[abbr_id]
     remove_value_highlight(abbr_data.hl_id)
     close_tooltip(abbr_data.tooltip_id)
 end
@@ -98,7 +98,7 @@ end
 local function output_reminders(abbr_data)
 
     local buf = vim.api.nvim_get_current_buf()
-    if not abbreinder._enabled[buf] then
+    if not abbreinder.enabled[buf] then
         -- false = unsubscribe
         return false
     end
@@ -108,9 +108,9 @@ local function output_reminders(abbr_data)
         return
     end
 
-    local abbr_id = abbreinder._abbr_id
-    abbreinder._abbr_id = abbreinder._abbr_id + 1
-    abbreinder._abbr_data[abbr_id] = {}
+    local abbr_id = abbreinder.next_abbr_id
+    abbreinder.next_abbr_id = abbreinder.next_abbr_id + 1
+    abbreinder.abbr_data[abbr_id] = {}
 
     if abbreinder.config.value_highlight.enabled then
         add_value_highlight(abbr_data, abbr_id)
@@ -129,6 +129,11 @@ local function output_reminders(abbr_data)
     end)
 end
 
+local function remove_autocmds()
+    vim.cmd([[
+    command! -bang AbbreinderDisable autocmd! Abbreinder
+    ]])
+end
 
 local function create_autocmds()
     vim.cmd[[
@@ -146,14 +151,15 @@ local function create_ex_commands()
     ]])
 end
 
-function abbreinder.disable()
+local function disable()
     local buf = vim.api.nvim_get_current_buf()
-    abbreinder._enabled[buf] = false
+    abbreinder.enabled[buf] = false
+    remove_autocmds()
 end
 
-function abbreinder.enable()
+local function enable()
     local buf = vim.api.nvim_get_current_buf()
-    abbreinder._enabled[buf] = true
+    abbreinder.enabled[buf] = true
     create_autocmds()
     create_ex_commands()
     abbremand.on_abbr_forgotten(output_reminders)
@@ -162,11 +168,15 @@ end
 -- @Summary Sets up abbreinder
 -- @Description launch abbreinder with specified config (falling back to defaults from ./abbreinder/config.lua)
 -- @Param config(table) - user specified config
-function abbreinder.setup(user_config)
+local function setup(user_config)
     user_config = user_config or {}
 
     abbreinder.config = vim.tbl_deep_extend('force', default_config, user_config)
-    abbreinder.enable()
+    enable()
 end
 
-return abbreinder
+return {
+    enable = enable,
+    disable = disable,
+    setup = setup,
+}
