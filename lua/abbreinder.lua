@@ -7,7 +7,8 @@ local abbreinder = {
     _abbr_id = 0,
     -- [abbr_id] = {tooltip_id, hl_id}
     _abbr_data = {},
-    _enabled = false,
+    -- [buf_num] = bool
+    _enabled = {},
 }
 
 -- @return namespace id
@@ -96,7 +97,9 @@ end
 -- @param abbr {trigger, value, row, col, col_end, on_change}
 local function output_reminders(abbr_data)
 
-    if not abbreinder._enabled then
+    local buf = vim.api.nvim_get_current_buf()
+    if not abbreinder._enabled[buf] then
+        print('not enabled')
         -- false = unsubscribe
         return false
     end
@@ -127,6 +130,16 @@ local function output_reminders(abbr_data)
     end)
 end
 
+
+local function create_autocmds()
+    vim.cmd[[
+    augroup Abbreinder
+    autocmd!
+    autocmd BufNewFile,BufReadPre * :lua require('abbreinder').enable()
+    augroup END
+    ]]
+end
+
 local function create_ex_commands()
     vim.cmd([[
     command! -bang AbbreinderEnable lua require('abbreinder').enable()
@@ -135,11 +148,14 @@ local function create_ex_commands()
 end
 
 function abbreinder.disable()
-    abbreinder._enabled = false
+    local buf = vim.api.nvim_get_current_buf()
+    abbreinder._enabled[buf] = false
 end
 
 function abbreinder.enable()
-    abbreinder._enabled = true
+    local buf = vim.api.nvim_get_current_buf()
+    abbreinder._enabled[buf] = true
+    create_autocmds()
     create_ex_commands()
     abbremand.on_abbr_forgotten(output_reminders)
 end
