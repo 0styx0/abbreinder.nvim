@@ -4,7 +4,7 @@ local config_defaults = {
         group = 'Special', -- highlight to use
         time = 4000 -- -1 for permanent
     },
-    tooltip = { -- only takes effect if output_as.tooltip = true
+    tooltip = {
         enabled = true,
         time = 4000, -- time before tooltip closes
         opts = {}, -- see :help nvim_open_win

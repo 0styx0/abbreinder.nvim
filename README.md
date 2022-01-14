@@ -1,6 +1,7 @@
 ### Table of Contents
 + [Usecase](#usecase)
 + [Installation](#installation)
++ [Features](#features)
 + [Commands](#commands)
 
 Note: This plugin is now in "beta". I'm adding nice to have features before release (at which point the plugin will be at a point where it should always be stable to use). If you happen to stumble upon this and find a bug, please raise an issue letting me know.
@@ -51,7 +52,7 @@ local config_defaults = {
         group = 'Special', -- highlight to use
         time = 4000 -- -1 for permanent
     },
-    tooltip = { -- only takes effect if output_as.tooltip = true
+    tooltip = {
         enabled = true,
         time = 4000, -- time before tooltip closes
         opts = {}, -- see :help nvim_open_win
@@ -66,6 +67,13 @@ local config_defaults = {
 }
 ```
 While the config here will most likely be kept up to date, feel free to check out [./lua/config.lua](./lua/config.lua) for the actual version.
+
+---
+
+### Features
++ Takes into account normal mode commands and backspacing while typing
++ Close reminders on buffer change or if the abbreviation value is deleted
++ Works with abbreviations added/removed on the fly
 
 ---
 
