@@ -17,7 +17,7 @@ TABLE OF CONTENTS ~
 
 USECASE ~
 
-I often come up with abbreviations that _should_ make typing faster, but I also
+I often come up with abbreviations that _should_ make typing faster, but then I
 forget they exist. This dilemma especially comes up when I create abbreviations
 using Tim Pope’s vim-abolish <https://github.com/tpope/vim-abolish> - I
 create hundreds of abbreviations, but can’t take full advantage of them. To
