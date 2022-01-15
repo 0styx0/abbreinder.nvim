@@ -4,8 +4,6 @@
 + [Features](#features)
 + [Commands](#commands)
 
-Note: This plugin is now in "beta". I'm adding nice to have features before release (at which point the plugin will be at a point where it should always be stable to use). If you happen to stumble upon this and find a bug, please raise an issue letting me know.
-
 ---
 
 ### Usecase
