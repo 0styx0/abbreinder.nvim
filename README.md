@@ -7,7 +7,7 @@
 ---
 
 ### Usecase
-I often come up with abbreviations that _should_ make typing faster, but I also forget they exist.
+I often come up with abbreviations that _should_ make typing faster, but then I forget they exist.
 This dilemma especially comes up when I create abbreviations using Tim Pope's [vim-abolish](https://github.com/tpope/vim-abolish) - I create hundreds of abbreviations, but can't take full advantage of them. To solve this, Abbreinder works by notifying you when you've typed the expanded form of an abbreviation instead of using the abbreviation functionality.
 
 
