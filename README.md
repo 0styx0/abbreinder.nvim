@@ -75,6 +75,7 @@ While the config here will most likely be kept up to date, feel free to check ou
 + Takes into account normal mode commands and backspacing while typing
 + Close reminders on buffer change or if the abbreviation value is deleted
 + Works with abbreviations added/removed on the fly
++ Does not trigger if the trigger is the same length as the value, so that abbreviations that correct typos do not remind of incorrect spelling
 
 ---
 
