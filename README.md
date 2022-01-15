@@ -18,6 +18,9 @@ This dilemma especially comes up when I create abbreviations using Tim Pope's [v
 + Start typing
 + If you type an abbreviation's value (eg, `Neovim`) instead of using the trigger, you will get a message reminding you of the abbreviation
 
+![Plugin in use](https://user-images.githubusercontent.com/18606569/149605161-ab656f03-bb0a-4e7b-a68f-ce7f44f169b1.gif)
+
+
 ---
 
 ### Installation
