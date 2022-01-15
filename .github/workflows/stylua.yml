@@ -15,7 +15,7 @@ jobs:
       - uses: JohnnyMorganz/stylua-action@1.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --config-path=stylua.toml lua/ test/
+          args: --config-path=stylua.toml lua/
       - name: Commit files
         run: |
           git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
