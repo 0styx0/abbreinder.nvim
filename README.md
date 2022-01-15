@@ -29,14 +29,16 @@ This dilemma especially comes up when I create abbreviations using Tim Pope's [v
 use {
     '0styx0/abbreinder.nvim',
     requires = {
-        '0styx0/abbremand.nvim',
-        module = 'abbremand' -- if want to lazy load
+        {
+            '0styx0/abbremand.nvim',
+            module = 'abbremand' -- if want to lazy load
+        }
     },
     config = function()
-        -- <config> can be empty to stay with defaults
+        -- config can be empty to stay with defaults
         -- or anything can be changed, with anything unspecified
         -- retaining the default values
-        require'abbreinder'.setup(<config>)
+        require'abbreinder'.setup()
     end,
     event = 'BufRead', -- if want lazy load
 }
