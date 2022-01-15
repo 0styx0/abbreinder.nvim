@@ -88,7 +88,6 @@ local function add_value_highlight(abbr_data, abbr_id)
 end
 
 local function close_reminders(abbr_id)
-
     local abbr_data = abbreinder.abbr_data[abbr_id]
 
     if not abbr_data then
@@ -109,7 +108,6 @@ end
 
 -- @param abbr {trigger, value, row, col, col_end, on_change}
 local function output_reminders(abbr_data)
-
     local buf = vim.api.nvim_get_current_buf()
     if not abbreinder.enabled[buf] then
         -- false = unsubscribe
@@ -149,13 +147,13 @@ local function remove_autocmds()
 end
 
 local function create_autocmds()
-    vim.cmd[[
+    vim.cmd([[
     augroup Abbreinder
     autocmd!
     autocmd BufNewFile,BufReadPre * :lua require('abbreinder').enable()
     autocmd BufLeave * :lua require('abbreinder').close_all_reminders()
     augroup END
-    ]]
+    ]])
 end
 
 local function create_ex_commands()

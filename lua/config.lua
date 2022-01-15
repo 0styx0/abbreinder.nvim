@@ -2,7 +2,7 @@ local config_defaults = {
     value_highlight = {
         enabled = true,
         group = 'Special', -- highlight to use
-        time = 4000 -- -1 for permanent
+        time = 4000, -- -1 for permanent
     },
     tooltip = {
         enabled = true,
