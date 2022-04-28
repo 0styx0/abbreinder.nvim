@@ -23,7 +23,8 @@ This dilemma especially comes up when I create abbreviations using Tim Pope's [v
 
 ### Installation
 
-#### Packer:
+<details>
+    <summary>Packer</summary>
 
 ```lua
 use {
@@ -43,6 +44,23 @@ use {
     event = 'BufRead', -- if want lazy load
 }
 ```
+
+</details>
+
+<details>
+    <summary>Vim-Plug</summary>
+
+```vim
+call plug#begin()
+    Plug '0styx0/abbremand.nvim'
+    Plug '0styx0/abbreinder.nvim'
+call plug#end()
+
+augroup setup_abbreinder
+    autocmd BufRead * :lua require'abbreinder'.setup()
+augroup END
+```
+</details>
 
 ----
 
