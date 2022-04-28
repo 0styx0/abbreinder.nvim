@@ -57,6 +57,7 @@ call plug#begin()
 call plug#end()
 
 augroup setup_abbreinder
+    autocmd!
     autocmd BufRead * :lua require'abbreinder'.setup()
 augroup END
 ```
