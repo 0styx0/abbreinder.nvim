@@ -41,7 +41,7 @@ form of an abbreviation instead of using the abbreviation functionality.
 
 INSTALLATION ~
 
-                                                          *abbreinder-Packer:*
+Packer
 
 >
     use {
@@ -60,6 +60,20 @@ INSTALLATION ~
         end,
         event = 'BufRead', -- if want lazy load
     }
+<
+
+
+Vim-Plug
+
+>
+    call plug#begin()
+        Plug '0styx0/abbremand.nvim'
+        Plug '0styx0/abbreinder.nvim'
+    call plug#end()
+    
+    augroup setup_abbreinder
+        autocmd BufRead * :lua require'abbreinder'.setup()
+    augroup END
 <
 
 
