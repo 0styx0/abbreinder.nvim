@@ -106,6 +106,10 @@ local function close_all_reminders()
     end
 end
 
+local function ltrim(s)
+  return s:match'^%s*(.*)'
+end
+
 -- @param abbr {trigger, value, row, col, col_end, on_change}
 local function output_reminders(abbr_data)
     local buf = vim.api.nvim_get_current_buf()
@@ -115,7 +119,11 @@ local function output_reminders(abbr_data)
     end
 
     -- case of people using abbreviations to correct typos
-    if #abbr_data.trigger == #abbr_data.value then
+    --
+    -- remove trailing whitespace from abbreviation, to avoid cases where this
+    -- causes a length mismatch.
+    trimmed_abbr = ltrim(abbr_data.value)
+    if #abbr_data.trigger == #trimmed_abbr then
         return
     end
 
